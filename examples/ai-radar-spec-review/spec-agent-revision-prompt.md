@@ -110,6 +110,9 @@ client = openai.OpenAI(
     max_words_excerpt: 200      # for Pass 1 input (words, not tokens)
     max_words_full: 800         # for Pass 2 input (words, not tokens)
   ```
+- Update Section 4.1 repo structure: add `excerpt_fetcher.py` and `full_fetcher.py` to `radar/processing/` with descriptions:
+  - `excerpt_fetcher.py` — fetches title + first ~200 words per URL for Pass 1 input
+  - `full_fetcher.py` — fetches complete article text for Pass 1 survivors only
 
 ---
 
@@ -134,7 +137,7 @@ client = openai.OpenAI(
 **Spec changes:**
 - Reconcile Section 3.2 and Section 4.2 — they currently contradict each other
 - Section 3.2 numbered list and Section 4.2 data flow must use the same order
-- Add the Normalize step (currently in 3.2 but absent from 4.2) to the 4.2 data flow
+- **Note:** The canonical updated Section 4.2 data flow is provided in Decision 3 Addendum — use that as the authoritative source for Section 4.2. The Normalize step from the old Section 3.2 is handled internally by `excerpt_fetcher.py` and `full_fetcher.py` and does not appear as a separate stage in the updated flow. Reconciliation means aligning Section 3.2's numbered list with Decision 3 Addendum's data flow, not re-deriving a new flow here.
 
 ---
 
@@ -373,6 +376,10 @@ class NormalizedItem:
     url_hash: str             # SHA-256 of normalized URL
     content_hash: str         # SHA-256 of clean_text
 
+# Note: NormalizedItem is used internally by the Excerpt Fetcher and Full Article Fetcher
+# as an intermediate processing step (after boilerplate removal, before trimming to excerpt
+# or full length). It is not passed between pipeline stages directly.
+
 @dataclass
 class ExcerptItem:
     url: str
@@ -381,6 +388,7 @@ class ExcerptItem:
     published_at: datetime
     excerpt: str              # title + first ~200 words
     url_hash: str
+    content_hash: str         # SHA-256 of excerpt, for Phase 2 dedup
 
 @dataclass
 class ScoredItem:
@@ -391,6 +399,17 @@ class ScoredItem:
     excerpt: str
     score: int                # 1-10 relevance score from Pass 1
     summary: str              # 2-3 sentence summary from Pass 1
+
+@dataclass
+class FullItem:
+    url: str
+    title: str
+    source: str
+    published_at: datetime
+    full_text: str            # boilerplate-stripped text, capped at max_words_full
+    word_count: int
+    score: int                # carried over from Pass 1
+    summary: str              # carried over from Pass 1
 
 @dataclass
 class Digest:
@@ -416,7 +435,7 @@ The current spec states "cache is checked before any fetch or LLM call" which is
 - Skip if URL hash exists in cache
 
 **Phase 2 — Content hash check (after excerpt fetch, before LLM):**
-- Hash `clean_text` with SHA-256
+- Hash `excerpt` with SHA-256 (full article text has not yet been fetched at this stage)
 - Skip if content hash exists in cache (catches same article published at different URLs)
 
 **Additional requirements:**
@@ -592,9 +611,7 @@ Add to Section 7 (Open-Source Considerations):
 - Consider shipping a `.pre-commit-config.yaml` with secret scanning hooks
 
 ### Suggestion 5 — Data Residency Disclosure for GitHub Models
-Add to Section 6 and as a comment in `config.example.yaml`:
-- Using the default GitHub Models backend sends article content to Microsoft/OpenAI infrastructure
-- Users processing sensitive content should review GitHub's data processing terms
+**Covered by Required Action 14** — no additional spec change needed. Required Action 14 already mandates adding data residency disclosure to Section 6 and a reminder comment to `config.example.yaml`. Do not add a duplicate entry.
 
 ### Suggestion 6 — Cost Tracking in Logs
 Add to the logging spec (Required Action 7) and Section 3.5 config:
@@ -626,6 +643,7 @@ Minor changes requiring no judgment.
 
 ### Close These (resolved by decisions above):
 - **Open Question #3** (Gmail OAuth in Actions) — resolved: Option (b), refresh token as GitHub Secret, with `python -m radar auth gmail` helper
+- **Open Question #4** (Should digests be committed to repo or artifacts only?) — resolved: configurable via `commit_digests` flag; default is `false` (artifacts only, per Decision 4)
 - **Open Question #5** (Rate limit handling for GitHub Models) — resolved: exponential backoff, max 3 retries (covered in Required Action 3)
 
 ### Add These New Open Questions to Section 9:
@@ -657,4 +675,4 @@ Do not modify the following unless directly required by an action above:
 - Preserve all existing tables, code blocks, and formatting conventions
 - Where config blocks are updated, show the **complete updated config block**, not just the changed lines
 - Where new sections are added, insert them at a logical position and update the document structure accordingly
-- **Version bump:** update version to `0.2 (MVP — Post-Review Revision)` and Last Updated date to `2026-04-04`
+- **Version bump:** update version to `0.2 (MVP — Post-Review Revision)` and Last Updated date to `2026-04-05`
