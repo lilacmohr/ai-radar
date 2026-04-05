@@ -1,6 +1,6 @@
 # ai-radar — Product & Technical Specification
 
-**Version:** 0.2 (MVP — Post-Review Revision)
+**Version:** 0.3 (MVP — Open Questions Resolved)
 **Status:** Draft
 **Last Updated:** 2026-04-05
 
@@ -54,10 +54,10 @@ The pipeline must support the following source types. Each source type is a plug
 
 | Source Type | Connector | Notes |
 |---|---|---|
-| Gmail newsletters | Gmail API (OAuth) | Reads unread emails from configured labels/senders. v0.1 supports link-list newsletters only (extracts URLs from email body). Full-content newsletter processing is post-MVP. |
+| Gmail newsletters | Gmail API (OAuth) | Reads unread emails from configured labels/senders. v0.1 supports link-list newsletters only (extracts URLs from email body). Full-content newsletter processing is post-MVP. Default `config.example.yaml` includes TLDR AI and The Batch as example link-list senders. Verify sender email addresses before use. |
 | RSS/Atom feeds | `feedparser` | Company blogs, ArXiv, HN, research labs |
 | Web scraping | `trafilatura` + `requests` | For URLs extracted from emails or feeds |
-| ArXiv | ArXiv API + RSS | Filter by category (cs.AI, cs.LG, cs.CL, etc.) |
+| ArXiv | ArXiv API + RSS | Filter by category (cs.AI, cs.LG, cs.CL, etc.). Abstracts only for MVP; full paper ingestion is post-MVP. |
 | Hacker News | HN Algolia API | Filter by keyword, score threshold. Note: scores are time-sensitive — a post 2 hours old with 50 points may reach 200 by end of day. Consider extending lookback to 24–48 hours to let scores stabilize. |
 | Podcast transcripts | RSS + transcript fetch | Where transcripts are available in feed (post-MVP, not yet implemented) |
 
@@ -77,6 +77,16 @@ The Gmail connector requires OAuth credentials. For local development, the stand
 2. **Storage:** Store the refresh token as the `GMAIL_REFRESH_TOKEN` GitHub Secret.
 3. **Token expiry handling:** The pipeline must detect token expiry and exit with a descriptive error (e.g., `"Gmail refresh token expired. Re-run 'python -m radar auth gmail' and update the GMAIL_REFRESH_TOKEN secret."`), not a generic API failure or silent skip.
 4. **GCP "testing" mode note:** OAuth apps in GCP "testing" mode issue tokens that expire in 7 days. Recommend moving the OAuth app to production mode for a 6-month expiry window. See Open Questions for details on the verification path.
+5. **GCP OAuth app mode:**
+   - **Testing mode (default):** Refresh tokens expire in 7 days. Suitable for initial
+     development. The pipeline detects expiry and emits a clear error message with
+     re-auth instructions.
+   - **Production mode:** Refresh tokens expire after 6 months of non-use. Requires
+     Google OAuth app verification (privacy policy URL, domain verification, and Google
+     review). See: https://support.google.com/cloud/answer/9110914
+   - **Recommendation:** Begin with testing mode. Run `python -m radar auth gmail` to
+     re-auth when the token expires. Pursue production mode verification once the
+     pipeline is stable and running reliably.
 
 #### Data Models
 
@@ -156,7 +166,7 @@ All steps before LLM calls must be deterministic Python with no API cost:
 1. **Fetch** — pull raw content from each enabled source
 2. **Deduplicate (Phase 1 — URL hash)** — normalize URLs (strip tracking parameters, follow redirects to canonical URL), compute SHA-256 of the normalized URL, skip items whose URL hash exists in the cache
 3. **Extract URLs** — for Gmail sources, extract linked URLs from the email body (not text extraction from the email itself). Prefer HTML MIME part, fall back to plain text. Emails are marked as read after successful processing. Each extracted URL is treated as an independent article candidate.
-4. **Extract Excerpt** — fetch title + first ~200 words per linked URL for Pass 1 input. Boilerplate removal is handled internally by the excerpt fetcher using `trafilatura`.
+4. **Extract Excerpt** — fetch title + first ~200 words per linked URL for Pass 1 input. Boilerplate removal is handled internally by the excerpt fetcher using `trafilatura`. For ArXiv sources, the abstract text is used directly as the excerpt (it is already available from the ArXiv API response). The Excerpt Fetcher web fetch step is bypassed for ArXiv items — no URL fetch required.
 5. **Deduplicate (Phase 2 — Content hash)** — compute SHA-256 of `excerpt` text after boilerplate removal. Skip items whose content hash exists in the cache. This catches the same article published at different URLs.
 6. **Pre-filter** — case-insensitive substring match against the user's `interests` list. Fields searched: title + excerpt (~200 words). An article passes if ANY keyword from the `interests` list matches. Example: interest `"LLM inference"` matches articles containing `"llm inference"`, `"LLM Inference"`, `"LLM inference and serving"`, etc.
 
@@ -264,6 +274,11 @@ sources:
     labels: ["newsletters", "AI"]
     max_age_days: 1
     newsletter_type: "link_list"  # only supported type in v0.1; full_content is post-MVP
+    senders:                      # filter to specific newsletter senders; leave empty to process all emails in label
+      - name: "TLDR AI"
+        email: "dan@tldr.tech"    # verify before use — sender addresses can change
+      - name: "The Batch"
+        email: "thebatch@deeplearning.ai"  # verify before use — sender addresses can change
   arxiv:
     enabled: true
     categories: ["cs.AI", "cs.LG", "cs.CL", "cs.MA"]
@@ -309,7 +324,7 @@ output:
 
 **`.env`** — secrets only, never committed:
 ```
-GITHUB_MODELS_TOKEN=...       # Personal access token for GitHub Models API (requires "models" scope)
+GITHUB_MODELS_TOKEN=...       # Fine-grained personal access token; requires Account permissions > Models: Read-only
 GMAIL_CLIENT_ID=...           # OAuth client ID from GCP console
 GMAIL_CLIENT_SECRET=...       # OAuth client secret from GCP console
 GMAIL_REFRESH_TOKEN=...       # Generated via: python -m radar auth gmail
@@ -348,6 +363,32 @@ Note: `GITHUB_TOKEN` is auto-injected by GitHub Actions and provides repository 
 
 **Failure notification:** GitHub natively emails the repo owner on workflow failure — no additional config required.
 
+#### Cache Persistence in GitHub Actions
+
+GitHub Actions runners are ephemeral — `cache/radar.db` does not persist between runs by default, silently breaking deduplication. Resolve this using the `actions/cache` action to persist the cache directory between runs. Add the following steps to `.github/workflows/daily-briefing.yml`:
+
+```yaml
+- name: Restore cache
+  uses: actions/cache@v4
+  with:
+    path: cache/
+    key: radar-cache-${{ runner.os }}
+    restore-keys: radar-cache-
+
+- name: Run pipeline
+  run: python -m radar run
+
+- name: Save cache
+  uses: actions/cache@v4
+  with:
+    path: cache/
+    key: radar-cache-${{ runner.os }}
+```
+
+**Cache miss behavior:** If the cache is not found (first run, or cache evicted by GitHub's 7-day retention policy for unused caches), the pipeline runs without dedup history. All articles are processed as new. This is safe — the pipeline is idempotent and produces a valid digest. The next run will populate the cache normally.
+
+**Retention note:** GitHub Actions cache has a 10GB limit per repo and a 7-day retention policy for unused caches. For a daily pipeline producing a small SQLite file, neither limit will be reached in practice.
+
 #### CLI Reference
 
 | Command | Description |
@@ -365,6 +406,13 @@ Note: `GITHUB_TOKEN` is auto-injected by GitHub Actions and provides repository 
 - Log and skip the failed source; pipeline continues with remaining sources
 - Never abort the full pipeline on a single source failure
 - If ALL sources fail: exit code 2 (fatal), write failure-digest file
+
+#### Paywalled or unextractable articles
+- If `trafilatura` returns empty or below-minimum-length content (< 50 words) after fetching a URL, treat as a likely paywall or extraction failure
+- Log the URL and reason at INFO level
+- Skip the article from further processing
+- Flag in the Pipeline Metadata section of the digest: "N articles skipped (paywall or extraction failure)"
+- Do not abort the pipeline
 
 #### LLM parse failures (Pass 1)
 - Validate output against schema
@@ -517,10 +565,19 @@ The `LLMClient` abstraction exists to make adding backends post-MVP straightforw
 GitHub Models uses the OpenAI-compatible API endpoint:
 ```python
 client = openai.OpenAI(
-    base_url="https://models.inference.ai.azure.com",
+    base_url="https://models.github.ai/inference",
     api_key=os.environ["GITHUB_MODELS_TOKEN"]
 )
 ```
+
+**Verified model identifiers for GitHub Models (as of 2026-04-05):**
+- `gpt-4o-mini` — Pass 1 summarization (fast, low cost)
+- `gpt-4o` — Pass 2 synthesis (higher quality)
+
+Note: GitHub Models also offers `gpt-4.1-mini` and `gpt-4.1`, which are newer and
+generally stronger than the gpt-4o family. These are valid drop-in replacements
+configurable via one config change — no code changes required. Verify current model
+availability at https://github.com/marketplace/models before changing defaults.
 
 Backend is selected via `config.yaml`:
 ```yaml
@@ -536,6 +593,7 @@ SQLite-based cache stored in `cache/radar.db`:
 - Items are considered duplicate if URL hash OR content hash matches
 - Cache TTL: configurable (default: 30 days via `cache_ttl_days`); expired entries are purged automatically on each run
 - `cache/` directory is created automatically on first run if it does not exist
+- The project-directory location (`cache/`) was chosen over a user cache directory (`~/.cache/ai-radar/`) for v0.1 to keep the project self-contained and simplify the `actions/cache` CI integration. Migration to a user cache directory is a post-MVP consideration.
 - Deleting `cache/radar.db` is always safe — it is a pure dedup optimization. Re-running after deletion causes all articles to be reprocessed (no data loss, no silent errors).
 
 **Two-phase deduplication:**
@@ -717,12 +775,4 @@ Recommend `git-secrets` or GitHub's built-in secret scanning for forks. Consider
 
 ## 9. Open Questions
 
-| # | Question | Notes |
-|---|---|---|
-| 1 | How to handle paywalled articles linked from newsletters? | Graceful skip + flag in digest |
-| 2 | Should ArXiv abstracts only, or attempt full paper? | Abstracts for MVP |
-| 6 | How should the SQLite dedup cache persist across ephemeral GitHub Actions runners? | Options: use `actions/cache` to persist `cache/radar.db` between runs; commit cache to repo; document that CI mode relies on `published_at` recency filtering instead of hash-based dedup. Must be resolved before GitHub Actions trigger is fully functional. |
-| 7 | Which specific link-list newsletters will be included in `config.example.yaml`? | TLDR AI and The Batch are confirmed. Need sender email addresses and Gmail label names for default config. |
-| 8 | Are `gpt-4o-mini` and `gpt-4o` the correct model identifiers for GitHub Models? | Verify exact strings before finalizing config defaults. Base URL assumed: `https://models.inference.ai.azure.com`. |
-| 9 | Should `cache/` live in the project directory or `~/.cache/ai-radar/`? | Project directory is simpler; user cache dir is cleaner for OSS installs. |
-| 10 | What is the GCP OAuth app verification path for production-mode tokens? | Testing mode tokens expire in 7 days. Production mode requires Google verification (privacy policy, domain). Document the verification process or recommend an alternative long-lived credential approach. |
+All open questions from v0.2 have been resolved. New open questions will be added here as they are identified during implementation.
