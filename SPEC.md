@@ -76,8 +76,7 @@ The Gmail connector requires OAuth credentials. For local development, the stand
 1. **Initial local auth flow:** Run `python -m radar auth gmail` to open a browser-based OAuth consent flow. The command outputs the refresh token for storage as a GitHub Secret.
 2. **Storage:** Store the refresh token as the `GMAIL_REFRESH_TOKEN` GitHub Secret.
 3. **Token expiry handling:** The pipeline must detect token expiry and exit with a descriptive error (e.g., `"Gmail refresh token expired. Re-run 'python -m radar auth gmail' and update the GMAIL_REFRESH_TOKEN secret."`), not a generic API failure or silent skip.
-4. **GCP "testing" mode note:** OAuth apps in GCP "testing" mode issue tokens that expire in 7 days. Recommend moving the OAuth app to production mode for a 6-month expiry window. See Open Questions for details on the verification path.
-5. **GCP OAuth app mode:**
+4. **GCP OAuth app mode:**
    - **Testing mode (default):** Refresh tokens expire in 7 days. Suitable for initial
      development. The pipeline detects expiry and emits a clear error message with
      re-auth instructions.
@@ -372,18 +371,21 @@ GitHub Actions runners are ephemeral — `cache/radar.db` does not persist betwe
   uses: actions/cache@v4
   with:
     path: cache/
-    key: radar-cache-${{ runner.os }}
-    restore-keys: radar-cache-
+    key: radar-cache-${{ runner.os }}-${{ github.run_id }}
+    restore-keys: radar-cache-${{ runner.os }}-
 
 - name: Run pipeline
   run: python -m radar run
 
 - name: Save cache
-  uses: actions/cache@v4
+  if: always()
+  uses: actions/cache/save@v4
   with:
     path: cache/
-    key: radar-cache-${{ runner.os }}
+    key: radar-cache-${{ runner.os }}-${{ github.run_id }}
 ```
+
+Note: `actions/cache` treats keys as immutable — a static key would freeze the DB after the first run. The `run_id` suffix ensures each run saves an updated cache. `restore-keys` with the OS prefix ensures the latest prior cache is restored even though keys differ. The save step uses `actions/cache/save` with `if: always()` to persist the cache even if the pipeline step fails.
 
 **Cache miss behavior:** If the cache is not found (first run, or cache evicted by GitHub's 7-day retention policy for unused caches), the pipeline runs without dedup history. All articles are processed as new. This is safe — the pipeline is idempotent and produces a valid digest. The next run will populate the cache normally.
 
@@ -776,3 +778,17 @@ Recommend `git-secrets` or GitHub's built-in secret scanning for forks. Consider
 ## 9. Open Questions
 
 All open questions from v0.2 have been resolved. New open questions will be added here as they are identified during implementation.
+
+---
+
+## 10. Implementation Gaps to Resolve
+
+The following are non-blocking gaps to resolve during implementation. None require spec changes — they are decisions best made while building.
+
+| # | Gap | Context | Suggested approach |
+|---|---|---|---|
+| 1 | **LLM prompt templates not defined** | `llm/prompts.py` is in the repo structure but no prompt text is specified for Pass 1 or Pass 2. Prompt quality is the single biggest driver of digest quality. | Design iteratively. Start with a simple system prompt + user prompt per pass, evaluate output, and refine. |
+| 2 | **HN lookback period undecided** | Section 3.1 says "consider extending lookback to 24–48 hours" without deciding. | Start with 24 hours to match the daily cadence. Extend to 48 if too many quality posts are missed. |
+| 3 | **`max_cost_per_run` implementation unspecified** | No guidance on how to estimate cost — token pricing source, handling of GitHub Models free tier. | Estimate cost from token counts × per-token pricing. On the free tier, skip enforcement or log estimated cost without aborting. |
+| 4 | **`daily-briefing.yml` not fully specified** | Only fragments (secrets table, cache steps, permissions) are shown across multiple sections. | Assemble the full workflow from the fragments. Include: checkout, Python setup, dependency install, cache restore, pipeline run, cache save, artifact upload. |
+| 5 | **Keyword pre-filter noise with short terms** | Case-insensitive substring match means `"AI"` matches "detail", "maintain", etc. | Accept for MVP — the LLM scoring pass (Pass 1) handles false positives. If noise is excessive, consider word-boundary matching as a quick improvement. |
