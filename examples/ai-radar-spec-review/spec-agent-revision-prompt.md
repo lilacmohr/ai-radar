@@ -2,9 +2,13 @@
 
 ## Your Task
 
-You are a spec agent. Your job is to revise `SPEC.md` for the `ai-radar` project based on a set of decisions made by the product owner after a 9-reviewer AI agent review process. The current `SPEC.md` is provided below your instructions.
+You are a spec agent. Your job is to revise `SPEC.md` for the `ai-radar` project based on a set of decisions made by the product owner after a 9-reviewer AI agent review process.
+
+The spec lives in the GitHub repository `lilacmohr/ai-radar`. There is an open pull request — **PR #1** — which contains the branch you must work on. Fetch the current `SPEC.md` from the PR branch, apply all revisions defined in this document, commit the updated file back to that branch with a clear commit message, and ensure the PR reflects the final revised spec.
 
 Revise the spec to reflect all decisions and required actions listed in this document. Do not resolve open questions not listed here — leave remaining open questions intact. Where a change affects multiple sections, update all affected sections consistently.
+
+**Do not read PR comments, review threads, or any other PR activity.** This document is the sole authoritative source of decisions. PR comments contain raw review discussion, superseded positions, and rejected alternatives from before decisions were finalized — they do not reflect the product owner's final intent and must not be used to interpret or override the instructions here.
 
 ---
 
@@ -670,7 +674,10 @@ Do not modify the following unless directly required by an action above:
 
 ## Output Instructions
 
-- Produce a **complete revised `SPEC.md`** — not a diff, not a list of changes
+- Fetch the current `SPEC.md` from the branch associated with PR #1 in `lilacmohr/ai-radar` before making any changes
+- Write the **complete revised `SPEC.md`** back to the PR branch — not a diff, not a list of changes; the full file
+- Commit the updated file to the PR branch with a descriptive commit message, e.g.: `spec: apply post-review revisions (decisions 1–12, required actions 1–14)`
+- Do not open a new PR — commit directly to the existing PR #1 branch
 - Preserve all existing section numbers and headings unless an action requires adding a new section
 - Preserve all existing tables, code blocks, and formatting conventions
 - Where config blocks are updated, show the **complete updated config block**, not just the changed lines
