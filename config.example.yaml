@@ -1,0 +1,55 @@
+# ai-radar configuration template
+# Copy to config.yaml and fill in your values.
+# config.yaml is gitignored — never commit it (it may contain feed URLs you prefer private).
+
+sources:
+  rss:
+    enabled: true
+    feeds:
+      # Add RSS/Atom feed URLs here, one per line
+      # - https://example.com/feed.xml
+      # - https://blog.example.org/rss
+
+  hackernews:
+    enabled: true
+    min_score: 100          # minimum HN points to consider an item
+
+  arxiv:
+    enabled: false
+    categories:
+      # ArXiv category identifiers, e.g.:
+      # - cs.AI
+      # - cs.LG
+      # - stat.ML
+
+  gmail:
+    enabled: false
+    label: "newsletters"    # Gmail label to monitor for newsletter emails
+
+interests:
+  keywords:
+    # Case-insensitive keyword list for the pre-filter stage.
+    # Items whose title or excerpt match at least one keyword proceed to LLM Pass 1.
+    # Example:
+    # - "large language model"
+    # - "LLM"
+    # - "transformer"
+    # - "AI agent"
+
+llm:
+  backend: "github_models"  # only supported backend in v0.1
+  pass1_model: "gpt-4o-mini"  # fast + low cost; used for Pass 1 relevance scoring
+  pass2_model: "gpt-4o"       # higher quality; used for Pass 2 synthesis
+
+pipeline:
+  max_items_pass1: 50         # cap on items sent to LLM Pass 1
+  pass1_score_threshold: 6    # minimum score (1–10) to survive to Pass 2
+  max_items_pass2: 10         # cap on items sent to LLM Pass 2
+  max_words_full: 2000        # truncation limit per article before Pass 2
+
+cache:
+  cache_ttl_days: 30          # days before a seen item expires from the dedup cache
+
+output:
+  digest_dir: "digests"       # directory for generated digest files (relative to repo root)
+  commit_digests: false       # if true, auto-commit digest files after each run

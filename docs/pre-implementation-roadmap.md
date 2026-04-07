@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-05
+> **Last updated:** 2026-04-07
 
 ---
 
@@ -43,7 +43,7 @@
 | P0.1 | `CLAUDE.md` | ✅ | Agent briefing + engineering standards. 11 sections covering autonomy, conventions, TDD protocol, failure handling, quality gates, and playbook rationale. |
 | P0.2 | GitHub Issue Templates | ✅ | 4 templates: `[TEST]`, `[IMPL]`, `[SCAFFOLD]`, `[DECISION]`. TDD pairing enforced by template structure. `[DECISION]` issues track spec gaps as they surface. |
 | P0.3 | Claude Hooks | ✅ | 4 hooks wired in `.claude/settings.json`: SessionStart (context injection), PreToolUse (prevention gate), PostToolUse (lint + mypy per file), Stop (test suite completion gate). |
-| P0.4 | Phase 0 Ticket Set | ⬜ | GitHub Issues for all scaffolding work, written in `[SCAFFOLD]` template format, ready to hand to Claude Code. |
+| P0.4 | Phase 0 Ticket Set | ✅ | GitHub Issues for all scaffolding work, written in `[SCAFFOLD]` template format, ready to hand to Claude Code. Issues #3–#11. |
 | P0.5 | Prompt Templates | ⬜ | Pass 1 + Pass 2 prompts in `radar/llm/prompts.py`. Must exist before Phase 3 tickets are written. Closes spec gap #1. |
 
 ---
@@ -52,17 +52,17 @@
 *Executed via `[SCAFFOLD]` GitHub Issues. No application code.*
 *All work is configuration, tooling, and project structure.*
 
-| # | Deliverable | Status | Blocks |
-|---|---|---|---|
-| P1.1 | Repo structure | ⬜ | Everything |
-| P1.2 | `pyproject.toml` + `uv` | ⬜ | All Python work |
-| P1.3 | `ruff` + `mypy` config | ⬜ | Hooks (post_edit_lint.sh) |
-| P1.4 | `Makefile` | ⬜ | Hooks (stop_run_tests.sh), CI |
-| P1.5 | `.env.example` + `config.example.yaml` | ⬜ | Source connectors |
-| P1.6 | `tests/conftest.py` + `TestLLMClient` mock | ⬜ | All LLM-dependent tests |
-| P1.7 | Test fixture directory + sample fixtures | ⬜ | Source connector tests |
-| P1.8 | `AGENTS.md` | ⬜ | Documentation |
-| P1.9 | GitHub Actions workflow skeleton | ⬜ | CI/CD |
+| # | Deliverable | Status | Issue | Blocks |
+|---|---|---|---|---|
+| P1.1 | Repo structure | ⬜ | [#3](https://github.com/lilacmohr/ai-radar/issues/3) | Everything |
+| P1.2 | `pyproject.toml` + `uv` | ⬜ | [#4](https://github.com/lilacmohr/ai-radar/issues/4) | All Python work |
+| P1.3 | `ruff` + `mypy` config | ⬜ | [#5](https://github.com/lilacmohr/ai-radar/issues/5) | Hooks (post_edit_lint.sh) |
+| P1.4 | `Makefile` | ⬜ | [#6](https://github.com/lilacmohr/ai-radar/issues/6) | Hooks (stop_run_tests.sh), CI |
+| P1.5 | `.env.example` + `config.example.yaml` | ⬜ | [#7](https://github.com/lilacmohr/ai-radar/issues/7) | Source connectors |
+| P1.6 | `tests/conftest.py` + `TestLLMClient` mock | ⬜ | [#8](https://github.com/lilacmohr/ai-radar/issues/8) | All LLM-dependent tests |
+| P1.7 | Test fixture directory + sample fixtures | ⬜ | [#9](https://github.com/lilacmohr/ai-radar/issues/9) | Source connector tests |
+| P1.8 | `AGENTS.md` | ⬜ | [#10](https://github.com/lilacmohr/ai-radar/issues/10) | Documentation |
+| P1.9 | GitHub Actions workflow skeleton | ⬜ | [#11](https://github.com/lilacmohr/ai-radar/issues/11) | CI/CD |
 
 *Done when: `make check` runs clean on an empty `radar/__init__.py`.*
 
@@ -141,7 +141,7 @@ Spec v0.3 (✅)
     │       ├── CLAUDE.md (✅)
     │       ├── Issue Templates (✅)
     │       ├── Claude Hooks (✅)
-    │       ├── Phase 0 Ticket Set (⬜)  ← next
+    │       ├── Phase 0 Ticket Set (✅)
     │       └── Prompt Templates (⬜)    ← before P4 tickets
     │
     └── P1: Repo Scaffolding (⬜)
@@ -173,7 +173,7 @@ using ai-radar as the reference implementation.
 | GitHub Issue templates (`[TEST]`, `[IMPL]`, `[SCAFFOLD]`, `[DECISION]`) | Standardized agent task format enforcing TDD pairing | ✅ |
 | Claude hooks suite | Enforcement layer separating advisory (CLAUDE.md) from deterministic (hooks) | ✅ |
 | This roadmap | Pre-implementation phase structure for AI-first projects | ✅ |
-| Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ⬜ |
+| Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ✅ |
 | Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ⬜ |
 | TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | ⬜ |
 | ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | ⬜ |
@@ -198,6 +198,6 @@ using ai-radar as the reference implementation.
 
 ## Next Actions
 
-1. **⬜ Phase 0 ticket set** — Write `[SCAFFOLD]` GitHub Issues for P1.1–P1.9, ready to hand to Claude Code
-2. **⬜ Prompt templates** — Draft Pass 1 + Pass 2 prompts before Phase 4 tickets are written
+1. **✅ Phase 0 ticket set** — `[SCAFFOLD]` GitHub Issues #3–#11 created for P1.1–P1.9
+2. **⬜ Prompt templates** — Draft Pass 1 + Pass 2 prompts before Phase 4 tickets are written (P0.5)
 3. **⬜ Begin P1** — Execute scaffolding issues with Claude Code; capture decisions as `[DECISION]` issues
