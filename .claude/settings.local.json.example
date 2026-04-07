@@ -1,0 +1,31 @@
+{
+  // .claude/settings.local.json
+  // NOT committed to version control (.gitignore this file).
+  // Personal overrides for your local session preferences.
+  //
+  // Copy this file to .claude/settings.local.json and customize.
+  // Local settings layer on top of (and can override) settings.json.
+  //
+  // COMMON USE CASES:
+  //
+  // 1. Disable the Stop test gate for exploration/spike sessions
+  //    (re-enable before any [IMPL] issue work):
+  //
+  // "hooks": {
+  //   "Stop": []
+  // }
+  //
+  // 2. Disable lint hook for rapid prototyping:
+  //
+  // "hooks": {
+  //   "PostToolUse": []
+  // }
+  //
+  // 3. Set your current task type (used by TDD guard in pre_tool_guard.sh):
+  //    Do this at the start of every [IMPL] session.
+  //    Alternatively: echo "IMPL" > .claude/.current_task_type
+  //
+  // NOTE: Always re-enable hooks before opening a PR.
+  // The CI pipeline enforces the same gates — local hook bypasses
+  // only defer the feedback, they don't eliminate it.
+}

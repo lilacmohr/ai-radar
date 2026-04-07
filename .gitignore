@@ -158,6 +158,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Claude Code local settings (personal overrides — not for version control)
+.claude/settings.local.json
+
 # mypy
 .mypy_cache/
 .dmypy.json
