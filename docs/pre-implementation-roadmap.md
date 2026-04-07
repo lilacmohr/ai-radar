@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-07
+> **Last updated:** 2026-04-07 (P1 complete)
 
 ---
 
@@ -54,17 +54,17 @@
 
 | # | Deliverable | Status | Issue | Blocks |
 |---|---|---|---|---|
-| P1.1 | Repo structure | ⬜ | [#3](https://github.com/lilacmohr/ai-radar/issues/3) | Everything |
-| P1.2 | `pyproject.toml` + `uv` | ⬜ | [#4](https://github.com/lilacmohr/ai-radar/issues/4) | All Python work |
-| P1.3 | `ruff` + `mypy` config | ⬜ | [#5](https://github.com/lilacmohr/ai-radar/issues/5) | Hooks (post_edit_lint.sh) |
-| P1.4 | `Makefile` | ⬜ | [#6](https://github.com/lilacmohr/ai-radar/issues/6) | Hooks (stop_run_tests.sh), CI |
-| P1.5 | `.env.example` + `config.example.yaml` | ⬜ | [#7](https://github.com/lilacmohr/ai-radar/issues/7) | Source connectors |
-| P1.6 | `tests/conftest.py` + `TestLLMClient` mock | ⬜ | [#8](https://github.com/lilacmohr/ai-radar/issues/8) | All LLM-dependent tests |
-| P1.7 | Test fixture directory + sample fixtures | ⬜ | [#9](https://github.com/lilacmohr/ai-radar/issues/9) | Source connector tests |
-| P1.8 | `AGENTS.md` | ⬜ | [#10](https://github.com/lilacmohr/ai-radar/issues/10) | Documentation |
-| P1.9 | GitHub Actions workflow skeleton | ⬜ | [#11](https://github.com/lilacmohr/ai-radar/issues/11) | CI/CD |
+| P1.1 | Repo structure | ✅ | [#3](https://github.com/lilacmohr/ai-radar/issues/3) | Everything |
+| P1.2 | `pyproject.toml` + `uv` | ✅ | [#4](https://github.com/lilacmohr/ai-radar/issues/4) | All Python work |
+| P1.3 | `ruff` + `mypy` config | ✅ | [#5](https://github.com/lilacmohr/ai-radar/issues/5) | Hooks (post_edit_lint.sh) |
+| P1.4 | `Makefile` | ✅ | [#6](https://github.com/lilacmohr/ai-radar/issues/6) | Hooks (stop_run_tests.sh), CI |
+| P1.5 | `.env.example` + `config.example.yaml` | ✅ | [#7](https://github.com/lilacmohr/ai-radar/issues/7) | Source connectors |
+| P1.6 | `tests/conftest.py` + `TestLLMClient` mock | ✅ | [#8](https://github.com/lilacmohr/ai-radar/issues/8) | All LLM-dependent tests |
+| P1.7 | Test fixture directory + sample fixtures | ✅ | [#9](https://github.com/lilacmohr/ai-radar/issues/9) | Source connector tests |
+| P1.8 | `AGENTS.md` | ✅ | [#10](https://github.com/lilacmohr/ai-radar/issues/10) | Documentation |
+| P1.9 | GitHub Actions workflow skeleton | ✅ | [#11](https://github.com/lilacmohr/ai-radar/issues/11) | CI/CD |
 
-*Done when: `make check` runs clean on an empty `radar/__init__.py`.*
+*Done when: `make check` runs clean on an empty `radar/__init__.py`.* ✅ Complete — PR merged 2026-04-07.
 
 ---
 
