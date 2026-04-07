@@ -297,6 +297,19 @@ A task is **done** when:
 exceptions to quality standards compound — one bare except becomes the pattern
 junior engineers follow; one untyped dict spreads to adjacent modules.
 
+### 7.1 PR Description Format
+
+When opening a PR that closes GitHub Issues, use one `Closes` keyword per line:
+
+```
+Closes #13
+Closes #14
+Closes #15
+```
+
+**Do not use a comma-separated list** (`Closes #13, #14, #15`) — GitHub only closes
+the first issue in a comma-separated list. One line per issue is required.
+
 ---
 
 ## 8. LLM Prompt Conventions
