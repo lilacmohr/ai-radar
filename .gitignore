@@ -212,3 +212,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ai-radar runtime outputs
+digests/
+cache/
+config.yaml
