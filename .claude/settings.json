@@ -1,0 +1,107 @@
+{
+  // ai-radar Claude Code hook configuration
+  // Lives at: .claude/settings.json
+  // Committed to version control — applies to all contributors.
+  //
+  // PLAYBOOK NOTE:
+  //   This file is the team's shared quality enforcement layer.
+  //   Personal overrides (e.g. disable stop_run_tests for exploration sessions)
+  //   belong in .claude/settings.local.json (gitignored).
+  //
+  //   Hook philosophy for this project:
+  //   - PostToolUse hooks: correction layer (lint, format, type check per file)
+  //   - Stop hook: completion gate (full test suite must pass)
+  //   - PreToolUse hook: prevention layer (block hard-to-undo violations only)
+  //   - SessionStart hook: context injection (consistent baseline every session)
+  //
+  //   Hook scripts live in .claude/hooks/ and are executable bash scripts.
+  //   They receive JSON via stdin and communicate via exit codes + stdout JSON.
+  //
+  // EXIT CODE REFERENCE:
+  //   PostToolUse / Stop: exit 0 = allow, exit 1 = non-blocking warn, exit 2 = blocking (force continue)
+  //   PreToolUse: uses hookSpecificOutput.permissionDecision = "allow" | "deny"
+
+  "hooks": {
+
+    // ── SessionStart: inject git context + task state ──────────────────────
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/session_start.sh"
+          }
+        ]
+      }
+    ],
+
+    // ── PreToolUse: prevention layer ───────────────────────────────────────
+    // Fires BEFORE tool executes. Can deny the operation entirely.
+    // Matches Bash + all file-write tools.
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre_tool_guard.sh"
+          }
+        ]
+      }
+    ],
+
+    // ── PostToolUse: correction layer ──────────────────────────────────────
+    // Fires AFTER file write/edit. Runs lint + typecheck on the modified file.
+    // Non-blocking (exit 1) — Claude sees output and self-corrects.
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post_edit_lint.sh"
+          }
+        ]
+      }
+    ],
+
+    // ── Stop: completion gate ──────────────────────────────────────────────
+    // Fires when Claude believes it has finished a task.
+    // BLOCKING (exit 2) if tests fail — Claude is forced to continue.
+    // Guard against infinite loop: checks stop_hook_active field.
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop_run_tests.sh"
+          }
+        ]
+      }
+    ]
+
+  },
+
+  // ── Permissions: auto-allow read-only and safe operations ─────────────────
+  // Reduces permission prompts for operations that don't need human review.
+  // Claude Code will auto-approve these rather than asking each time.
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest*)",
+      "Bash(uv run ruff*)",
+      "Bash(uv run mypy*)",
+      "Bash(make *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(gh issue*)",
+      "Bash(gh pr*)",
+      "Read(**)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)"
+    ]
+  }
+}
