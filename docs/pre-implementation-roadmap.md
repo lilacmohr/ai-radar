@@ -44,7 +44,7 @@
 | P0.2 | GitHub Issue Templates | ✅ | 4 templates: `[TEST]`, `[IMPL]`, `[SCAFFOLD]`, `[DECISION]`. TDD pairing enforced by template structure. `[DECISION]` issues track spec gaps as they surface. |
 | P0.3 | Claude Hooks | ✅ | 4 hooks wired in `.claude/settings.json`: SessionStart (context injection), PreToolUse (prevention gate), PostToolUse (lint + mypy per file), Stop (test suite completion gate). |
 | P0.4 | Phase 0 Ticket Set | ✅ | GitHub Issues for all scaffolding work, written in `[SCAFFOLD]` template format, ready to hand to Claude Code. Issues #3–#11. |
-| P0.5 | Prompt Templates | ⬜ | Pass 1 + Pass 2 prompts in `radar/llm/prompts.py`. Must exist before Phase 3 tickets are written. Closes spec gap #1. |
+| P0.5 | Prompt Templates | ✅ | Pass 1 + Pass 2 prompts in `radar/llm/prompts.py`. Configurable via profile injection. Closes spec gap #1. |
 
 ---
 
@@ -74,9 +74,9 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P2.1 | `[TEST]` | `[IMPL]` | `radar/models.py` | ⬜ | §3.1, §4.2 |
-| P2.2 | `[TEST]` | `[IMPL]` | `radar/config.py` | ⬜ | §3.5 |
-| P2.3 | `[TEST]` | `[IMPL]` | `radar/cache.py` | ⬜ | §4.4 |
+| P2.1 | [#14](https://github.com/lilacmohr/ai-radar/issues/14) | [#17](https://github.com/lilacmohr/ai-radar/issues/17) | `radar/models.py` | ⬜ | §3.1, §4.2 |
+| P2.2 | [#15](https://github.com/lilacmohr/ai-radar/issues/15) | [#18](https://github.com/lilacmohr/ai-radar/issues/18) | `radar/config.py` | ⬜ | §3.5 |
+| P2.3 | [#16](https://github.com/lilacmohr/ai-radar/issues/16) | [#19](https://github.com/lilacmohr/ai-radar/issues/19) | `radar/cache.py` | ⬜ | §4.4 |
 
 *Done when: all dataclasses defined, config loads and validates, cache reads/writes correctly.*
 
