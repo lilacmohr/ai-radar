@@ -53,20 +53,20 @@ orchestration, and applying AI patterns across an engineering organization. \
 Deprioritize articles that are primarily useful to individual contributors \
 or that cover narrow implementation details without broader implications.
 
-Score each article independently on a 1–10 scale:
-  9–10  Directly addresses decisions, tradeoffs, or patterns at the engineering \
+Score each article independently on a 1-10 scale:
+  9-10  Directly addresses decisions, tradeoffs, or patterns at the engineering \
 org or architecture level. A leader or architect would act on this or change \
 their thinking as a result.
-  6–8   Relevant signal with a clear leadership or architectural angle. \
+  6-8   Relevant signal with a clear leadership or architectural angle. \
 Worth reading; likely to inform future decisions.
-  4–5   Primarily IC-focused or too narrow to generalize across a team or org. \
+  4-5   Primarily IC-focused or too narrow to generalize across a team or org. \
 Technically valid but limited org-level applicability.
-  1–3   Off-topic, vendor noise, hype without substance, or no actionable signal \
+  1-3   Off-topic, vendor noise, hype without substance, or no actionable signal \
 for this role.
 
 Score each article independently. Do not compare articles against each other.
 
-Write a 2–3 sentence summary that captures what the article is about and, \
+Write a 2-3 sentence summary that captures what the article is about and, \
 briefly, why it does or does not matter at the organizational level.\
 """
 
@@ -77,8 +77,8 @@ Required schema:
 [
   {{
     "url": "<exact url from input — do not modify>",
-    "score": <integer 1–10>,
-    "summary": "<2–3 sentence summary>"
+    "score": <integer 1-10>,
+    "summary": "<2-3 sentence summary>"
   }}
 ]
 
@@ -134,25 +134,25 @@ Generate a daily AI briefing from the articles below. Today's date: {date}.
 Produce each section using these exact headings, in this order:
 
 ## 📡 Executive Summary
-3–5 bullet points. The most important developments today for an engineering \
-leader with 2 minutes. Lead with what matters and what to watch — not just \
+3-5 bullet points. The most important developments today for an engineering \
+leader with 2 minutes. Lead with what matters and what to watch - not just \
 what happened.
 
 ## 🔍 Non-Obvious Insights
-3–5 observations. For each: briefly name the mainstream interpretation of a \
+3-5 observations. For each: briefly name the mainstream interpretation of a \
 story or trend, then surface what is being missed, underweighted, or worth \
 investigating further. Be specific — name the story, name the gap in the \
 conventional read. Stay curious rather than contrarian: the goal is a sharper \
 question or a better frame, not a rebuttal.
 
 ## ❓ Follow-Up Questions & Rabbit Holes
-5–10 questions worth investigating, ranked by potential insight value for an \
+5-10 questions worth investigating, ranked by potential insight value for an \
 engineering leader or architect. Prefer questions that lead somewhere concrete \
 (a decision, an experiment, a conversation to have) over questions that are \
 merely interesting.
 
 ## 📈 Trending Themes
-2–4 patterns detected across today's sources. Distinct from individual article \
+2-4 patterns detected across today's sources. Distinct from individual article \
 summaries — look for convergence across stories, trajectory shifts, emerging \
 tensions, or signals that something in the field is changing direction.
 
