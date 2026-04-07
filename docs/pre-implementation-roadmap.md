@@ -74,9 +74,9 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P2.1 | `[TEST]` | `[IMPL]` | `radar/models.py` | ⬜ | §3.1, §4.2 |
-| P2.2 | `[TEST]` | `[IMPL]` | `radar/config.py` | ⬜ | §3.5 |
-| P2.3 | `[TEST]` | `[IMPL]` | `radar/cache.py` | ⬜ | §4.4 |
+| P2.1 | [#14](https://github.com/lilacmohr/ai-radar/issues/14) | [#17](https://github.com/lilacmohr/ai-radar/issues/17) | `radar/models.py` | ⬜ | §3.1, §4.2 |
+| P2.2 | [#15](https://github.com/lilacmohr/ai-radar/issues/15) | [#18](https://github.com/lilacmohr/ai-radar/issues/18) | `radar/config.py` | ⬜ | §3.5 |
+| P2.3 | [#16](https://github.com/lilacmohr/ai-radar/issues/16) | [#19](https://github.com/lilacmohr/ai-radar/issues/19) | `radar/cache.py` | ⬜ | §4.4 |
 
 *Done when: all dataclasses defined, config loads and validates, cache reads/writes correctly.*
 
