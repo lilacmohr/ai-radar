@@ -267,6 +267,11 @@ Every module must have:
 # Integration tests may use real HTTP to fixture URLs (recorded with pytest-recording)
 ```
 
+**Why:** Real API and HTTP calls in unit tests make the suite slow, non-deterministic,
+and externally dependent. A test suite that requires live credentials cannot run in CI
+or for a new contributor without setup. `TestLLMClient` and fixture files are the
+isolation boundary — they make the full suite runnable offline, instantly, by anyone.
+
 ### 6.5 Running Tests
 
 ```bash
