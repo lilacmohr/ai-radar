@@ -18,11 +18,10 @@ import urllib.error
 from datetime import UTC, datetime
 from unittest.mock import patch
 
-from radar.sources.rss import RSSSource
-
 from radar.config import RssFeedEntryConfig, RssFeedsConfig
 from radar.models import RawItem
 from radar.sources.base import Source
+from radar.sources.rss import RSSSource
 
 # ---------------------------------------------------------------------------
 # Shared constants
