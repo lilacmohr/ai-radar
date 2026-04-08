@@ -264,4 +264,106 @@ than buried in a multi-file feature PR.
 
 ---
 
+## Implementation decisions worth preserving beyond the PR
+
+PR descriptions and commit messages are durable, but they're not read proactively.
+Decisions that affect future implementation agents should also be recorded here if
+they're non-obvious or could be silently undone by a future change.
+
+Three categories worth capturing from the P2 foundation implementation (PR #27):
+
+**1. `purge_expired` uses date-granular comparison, not datetime.**
+
+The test requires that an entry timestamped exactly `TTL_DAYS` ago is NOT purged.
+With a datetime comparison (`seen_at < now - timedelta(days=ttl_days)`), the cutoff
+is recomputed at call time — always a few microseconds later than the boundary
+timestamp — so the boundary item is always marginally older than the cutoff and gets
+purged. This is a race condition baked into the test setup.
+
+The fix: truncate both sides to `YYYY-MM-DD` before comparing. Items are purged only
+when their *date* is strictly before `(now - ttl_days).date()`. An item created at
+any time on day X is safe until the cutoff date passes X.
+
+If a future agent changes the TTL comparison to use datetime precision, the boundary
+test will start failing intermittently — likely to be misdiagnosed as flakiness.
+
+**2. `is_seen` uses hardcoded SQL branches instead of dynamic query construction.**
+
+The natural implementation builds the WHERE clause dynamically from whatever
+hashes are provided. Ruff's `S608` rule flags this as a potential SQL injection
+vector, even though the column names are hardcoded strings — it can't statically
+verify that. Since the input space is small (url_hash only, content_hash only, or
+both), three explicit hardcoded queries eliminate the false positive cleanly.
+
+If a future agent refactors to dynamic query construction, `S608` will fire. The
+fix is `# noqa: S608` with a comment explaining why it's safe, or keep the
+explicit branches.
+
+**3. `yaml` is in `mypy ignore_missing_imports`, not `types-PyYAML` in dev deps.**
+
+`pyyaml` ships without type stubs. Adding `types-PyYAML` to dev dependencies would
+fix `mypy --strict` correctly, but adding a new dependency requires a DECISION per
+CLAUDE.md §3. The minimum-surface fix was to add `yaml` to the existing
+`ignore_missing_imports` override in `pyproject.toml`.
+
+This is a debt item: `types-PyYAML` should be added to dev deps at the next
+planned dependency review. A future agent adding any module that imports `yaml` will
+inherit the same `ignore_missing_imports` workaround silently — the right fix is
+the stubs package.
+
+---
+
+## Fixture shape is a spec claim, not just scaffolding
+
+Test fixtures encode two kinds of information: the assertions encode *behavioral*
+decisions (OR vs AND semantics, required vs optional fields). But the fixture's
+*shape* encodes *structural* decisions — what fields must be present for the config
+to be valid, what a "minimal" valid instance looks like.
+
+The concrete failure: `MINIMAL_VALID_CONFIG` in the test suite included `hackernews`
+because several tests needed to exercise HackerNews fields. The [IMPL] agent saw
+`hackernews` in the minimal fixture and inferred it was required — and made it so.
+The implementation was internally consistent and passed all 87 tests. But it rejected
+configs the spec never said were invalid (RSS-only, ArXiv-only). The constraint was
+too strict and came entirely from the fixture shape, not the spec.
+
+**The rule:** `MINIMAL_VALID_CONFIG` should be the absolute minimum the spec requires
+— nothing else. If a field isn't spec-required, it doesn't belong in the minimal
+fixture, even if it makes other tests easier to write. Put extra fields in named
+fixtures that are explicit about what they're testing.
+
+This is a harder version of the "interface decisions in tests" problem: at least an
+assertion is visible at review time. A fixture's shape — what it *omits* — is nearly
+invisible. The only reliable catch is comparing the minimal fixture directly against
+the spec's "required fields" list before the [TEST] PR is approved.
+
+**Add to your [TEST] PR checklist:** *"Does MINIMAL_VALID_CONFIG contain only what
+the spec actually requires? Could a valid real-world config omit anything in it?"*
+
+---
+
+## `Literal[...]` for spec-constrained string fields — automated tools won't catch the gap
+
+When a spec defines a fixed set of valid values for a string field (e.g.,
+`content_type: "email" | "web" | "arxiv"`), using `str` as the type annotation
+passes mypy strict, ruff, and every test — as long as no test passes an invalid
+value. All three automated layers are satisfied by `str`. Only a reviewer comparing
+the type annotation against the spec notices the gap.
+
+The consequences of using `str` instead of `Literal[...]`:
+- A future connector passing `"html"` or `"rss"` is silently accepted at the model
+  layer and only fails when downstream code tries to handle it
+- mypy loses the ability to exhaustiveness-check `match content_type:` branches
+  in stage code
+
+**The rule:** if the spec lists valid values for a field, use `Literal[...]`. This
+is especially important for stage-boundary types (`RawItem`, `ExcerptItem`, etc.)
+where the type is the interface contract between modules written by different agents.
+
+**This is a review concern, not a linter concern.** Add it to your [TEST] PR
+checklist: *"For any string field with a constrained value set in the spec, is the
+type `Literal[...]` rather than `str`?"*
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
