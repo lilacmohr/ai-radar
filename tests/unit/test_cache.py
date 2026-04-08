@@ -46,9 +46,7 @@ def test_cache_init_creates_seen_items_table(temp_cache_dir: Path) -> None:
     db_path = temp_cache_dir / "radar.db"
     Cache(db_path)
     conn = sqlite3.connect(db_path)
-    tables = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'"
-    ).fetchall()
+    tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     conn.close()
     table_names = [row[0] for row in tables]
     assert "seen_items" in table_names
@@ -292,6 +290,29 @@ def test_purge_expired_on_empty_table_completes_without_error(
     cache = Cache(db_path)
     purged = cache.purge_expired(ttl_days=TTL_DAYS)
     assert purged == 0
+
+
+def test_purge_expired_does_not_remove_entry_at_exact_ttl_boundary(
+    temp_cache_dir: Path,
+) -> None:
+    """Entry seen exactly TTL_DAYS ago must NOT be purged.
+
+    Guards against an off-by-one bug where >= TTL_DAYS is used instead of
+    > TTL_DAYS, which would resurface already-seen articles from exactly 30 days ago.
+    """
+    db_path = temp_cache_dir / "radar.db"
+    cache = Cache(db_path)
+    boundary_seen_at = (datetime.now(tz=UTC) - timedelta(days=TTL_DAYS)).isoformat()
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO seen_items (url_hash, content_hash, seen_at) VALUES (?, ?, ?)",
+        (URL_HASH_A, CONTENT_HASH_A, boundary_seen_at),
+    )
+    conn.commit()
+    conn.close()
+    purged = cache.purge_expired(ttl_days=TTL_DAYS)
+    assert purged == 0
+    assert cache.is_seen(url_hash=URL_HASH_A) is True
 
 
 def test_purge_expired_returns_count_of_purged_rows(temp_cache_dir: Path) -> None:

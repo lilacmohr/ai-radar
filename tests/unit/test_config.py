@@ -219,8 +219,7 @@ def test_hackernews_min_score_is_required(tmp_path: Path) -> None:
     """
     config_file = tmp_path / "config.yaml"
     config_file.write_text(
-        "profile:\n  interests:\n    - LLM\n"
-        "sources:\n  hackernews:\n    enabled: true\n"
+        "profile:\n  interests:\n    - LLM\nsources:\n  hackernews:\n    enabled: true\n"
     )
     with pytest.raises(ValidationError, match="min_score"):
         load_config(config_file)
@@ -253,7 +252,17 @@ def test_load_config_raises_validation_error_on_threshold_above_range(
     tmp_path: Path,
 ) -> None:
     """relevance_threshold must be 1-10; value of 15 must raise ValidationError."""
-    out_of_range_config = MINIMAL_VALID_CONFIG + "  relevance_threshold: 15\n"
+    out_of_range_config = """\
+profile:
+  interests:
+    - "LLM"
+  relevance_threshold: 15
+
+sources:
+  hackernews:
+    enabled: true
+    min_score: 50
+"""
     config_file = tmp_path / "config.yaml"
     config_file.write_text(out_of_range_config)
     with pytest.raises(ValidationError, match="relevance_threshold"):
@@ -264,7 +273,17 @@ def test_load_config_raises_validation_error_on_threshold_below_range(
     tmp_path: Path,
 ) -> None:
     """relevance_threshold must be 1-10; value of 0 must raise ValidationError."""
-    out_of_range_config = MINIMAL_VALID_CONFIG + "  relevance_threshold: 0\n"
+    out_of_range_config = """\
+profile:
+  interests:
+    - "LLM"
+  relevance_threshold: 0
+
+sources:
+  hackernews:
+    enabled: true
+    min_score: 50
+"""
     config_file = tmp_path / "config.yaml"
     config_file.write_text(out_of_range_config)
     with pytest.raises(ValidationError, match="relevance_threshold"):
@@ -295,14 +314,28 @@ def test_load_config_raises_on_malformed_yaml(tmp_path: Path) -> None:
         load_config(config_file)
 
 
+def test_load_config_raises_on_empty_interests_list(tmp_path: Path) -> None:
+    """interests: [] must raise ValidationError — an empty list makes the config meaningless."""
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""\
+profile:
+  interests: []
+
+sources:
+  hackernews:
+    enabled: true
+    min_score: 50
+""")
+    with pytest.raises(ValidationError, match="interests"):
+        load_config(config_file)
+
+
 def test_load_config_raises_validation_error_on_unsupported_llm_backend(
     tmp_path: Path,
 ) -> None:
     """llm.backend='anthropic' is post-MVP; must raise ValidationError in v0.1."""
     config_file = tmp_path / "config.yaml"
-    config_file.write_text(
-        MINIMAL_VALID_CONFIG + "\nllm:\n  backend: anthropic\n"
-    )
+    config_file.write_text(MINIMAL_VALID_CONFIG + "\nllm:\n  backend: anthropic\n")
     with pytest.raises(ValidationError, match="backend"):
         load_config(config_file)
 
