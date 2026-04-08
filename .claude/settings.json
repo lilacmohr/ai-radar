@@ -53,9 +53,15 @@
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
       "Bash(gh issue*)",
       "Bash(gh pr*)",
-      "Read(**)"
+      "Bash(source .venv*)",
+      "Read(**)",
+      "Write",
+      "Edit"
     ],
     "deny": [
       "Bash(rm -rf /*)",
