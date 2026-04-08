@@ -51,7 +51,17 @@ if [[ "$CURRENT_BRANCH" == test/* ]]; then
   exit 0
 fi
 
-echo "━━━ Stop Gate: Running test suite ━━━"
+# TDD red-phase exception: test/* branches carry intentionally failing tests.
+# The Stop gate still runs tests for visibility, but does not block stopping.
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+TDD_RED_PHASE=false
+if [[ "$CURRENT_BRANCH" == test/* ]]; then
+  TDD_RED_PHASE=true
+  echo "━━━ Stop Gate: TDD red-phase branch ($CURRENT_BRANCH) ━━━"
+  echo "    Tests may fail — this is expected. Running for visibility only."
+else
+  echo "━━━ Stop Gate: Running test suite ━━━"
+fi
 echo "[test] uv run pytest tests/ -x -q --tb=short"
 
 timeout 120 uv run pytest tests/ -x -q --tb=short 2>&1
@@ -62,6 +72,11 @@ if [[ $PYTEST_EXIT -eq 0 ]] || [[ $PYTEST_EXIT -eq 5 ]]; then
   echo "[stop-gate] passed — all tests green" >&2
   exit 0
 else
+  if [[ "$TDD_RED_PHASE" == "true" ]]; then
+    echo ""
+    echo "[~] Tests failed on TDD red-phase branch — expected. Task complete."
+    exit 0
+  fi
   echo ""
   echo "[✗] Tests failed. Task is NOT complete."
   echo "    Fix the failing tests before finishing."

@@ -96,4 +96,172 @@ tooling enforcement and remove the CLAUDE.md entry — it's noise the agent does
 
 ---
 
+---
+
+## TDD and the enforcement layer: teach your hooks the TDD lifecycle
+
+The "test suite must pass before committing" quality gate directly conflicts with TDD
+red-phase commits, where failing tests are the *output*, not a problem. This collision
+is predictable but easy to miss when designing hooks — most hook designs are written
+during green-phase work and don't account for the red phase at all.
+
+**The fix is simple:** branches matching a naming convention (`test/*`, or whatever you
+establish) are TDD red-phase branches where failing tests are expected. Your commit gate
+and completion gate should both recognize this pattern and adjust accordingly: lint and
+typecheck still apply everywhere, but the test gate is waived on red-phase branches.
+
+**Do this before the first red-phase PR, not after.** Discovering the conflict mid-work
+means hook infrastructure changes get bundled with feature PRs, which obscures the
+history of both. The right sequence is: establish the TDD branch convention → update
+hooks to recognize it → then create your first `test/*` branch.
+
+**Playbook rule:** Add a checklist item to your pre-TDD setup: *"Do the commit gate and
+completion gate understand red-phase branches?"*
+
+---
+
+## Hook design: make every exit path visible
+
+Claude Code surfaces hook stderr to the user as feedback. Stdout is not surfaced. This
+means any hook that only writes to stdout is invisible from the user's perspective — they
+will always see "No stderr output" regardless of what the hook actually did.
+
+**Every exit path in a hook should write one line to stderr.** This includes the
+"skipped" paths (anti-loop guards, wrong directory checks, no test files found). A silent
+exit is indistinguishable from a hook that failed to run at all.
+
+Practical rules for hook authors:
+- Status summary → stderr (`echo "..." >&2`)
+- Full diagnostic output (test results, lint output) → stdout
+- Every `exit 0`, `exit 1`, `exit 2` should have a preceding stderr line
+- Test your hooks on a clean branch *before* any feature work — silent failures in hooks
+  create debugging sessions that look like project failures
+
+A related gotcha: know your tool's exit codes. `pytest` exits with code 5 when no tests
+are collected — not 0. A hook that treats any non-zero exit as failure will block on
+branches with no test files yet. Check what exit codes your tools produce for
+"nothing to do" vs "something failed" and handle them explicitly.
+
+---
+
+## The [TEST] phase makes the spec executable
+
+When an agent writes tests before implementation, every assertion is a falsifiable claim
+about the system. Ambiguities that survived spec review will surface during [TEST] work
+— because writing `assert cache.is_seen(url_hash=A, content_hash=B) is True` forces you
+to decide whether the semantics are OR or AND, in a way that reading the spec never does.
+
+This means the [TEST] phase is not just test authoring — it is spec validation. The
+agent is finding the spec gaps that matter.
+
+The failure mode: agents resolve ambiguities silently to keep moving, bake the choice
+into test code, and the reviewer never knows a decision was made. The test *looks* like
+spec. Six months later, when someone asks "why does this use OR semantics?", there is
+no record.
+
+**The right response when an agent hits an ambiguity during [TEST] work:** open a
+`[DECISION]` issue, not a silent choice. The test file can wait. This is especially
+important because [DECISION] issues opened at this stage are cheap — they surface before
+any implementation is written, when changing the answer costs nothing.
+
+**Encode this in your `[TEST]` issue template as a Done When checklist item:** *"All
+spec ambiguities encountered while writing tests are documented as [DECISION] issues."*
+A checklist item in the issue the agent is working from fires at the right moment; a
+rule in CLAUDE.md does not reliably survive a long session.
+
+---
+
+## Stub pattern: tests that can't import show as ERROR, not FAIL
+
+In Python, if a test file imports a module that doesn't exist, pytest cannot collect the
+file — it shows as a collection **ERROR**, not a test **FAIL**. This distinction matters
+for TDD discipline: ERROR means "the test infrastructure is broken"; FAIL means "the
+behavior doesn't exist yet." You want the latter.
+
+**The stub pattern:** before running tests for the first time, create a minimal stub for
+the module under test — empty classes and functions with correct signatures but no logic.
+The stub is infrastructure, not implementation. It gives pytest enough to collect the
+tests, and the tests fail because the behavior doesn't exist.
+
+A related trap: a stub can accidentally satisfy tests. If your stub's `is_seen()` returns
+`False` and your test asserts `is_seen() is False` for unknown hashes, the test passes
+against the stub — for the wrong reason. Check not just that tests *fail*, but that they
+fail *because the behavior doesn't exist*, not because the stub happens to implement it.
+A test that passes against a stub that doesn't implement the behavior is a **false green**
+in the red phase, and false greens are the most expensive kind of bug to find later.
+
+**To detect false greens:** after writing tests, check the passing count. If more tests
+pass than you expect (interface contract checks, obvious no-op behaviors), investigate
+each one. Any test that passes because the stub accidentally implements the correct
+behavior should be redesigned so it would fail against a naive stub.
+
+---
+
+## Interface decisions in tests are invisible without explicit documentation
+
+When a test encodes an interface decision — the OR/AND semantics of a function,
+whether a field is required or optional, whether validation is runtime or type-checked
+only — it *looks like spec* to a reviewer. The reviewer reads what was decided, not that
+a decision was made. This makes PR review an unreliable catch mechanism for undocumented
+decisions.
+
+The convention that fixes this: **the PR description for a [TEST] PR should include an
+"Interface decisions made" section** listing every interpretive call, even obvious ones.
+Format: what was decided, where it's encoded in the tests, and what the spec says (or
+doesn't say). This gives the reviewer a directed reading list and creates a durable
+record of the decision in the PR history.
+
+Decisions that are genuinely ambiguous — where two reasonable engineers might choose
+differently — should be `[DECISION]` issues, not PR description entries. The distinction:
+- Obvious in context, just underdocumented → PR description entry
+- Genuinely debatable, would produce different implementations → `[DECISION]` issue
+
+---
+
+## Where to put task-phase behavioral guidance
+
+CLAUDE.md applies globally and is read at session start. Issue templates are injected at
+task time and apply to a specific type of work. These serve different purposes and content
+should be routed accordingly.
+
+**Put guidance in CLAUDE.md when** it applies across all phases of work — error handling
+conventions, logging format, module structure, quality gates. This is the layer for
+"always do X."
+
+**Put guidance in the issue template when** it needs to fire during a specific phase —
+"document [DECISION] issues during [TEST] work," "don't modify test files during [IMPL]
+work." By the time an agent is deep in writing test assertions, it will not re-read §6.1
+of CLAUDE.md to check whether the DECISION NEEDED protocol applies. A checklist item in
+the issue it's working from will fire. A paragraph in the global briefing likely won't.
+
+The practical test: *if this guidance needs to fire at a specific moment in a task, it
+belongs in the artifact for that task.* If it applies everywhere, CLAUDE.md. If it
+applies to a type of issue, that issue's template. If it applies at completion time,
+a hook.
+
+This routing decision also keeps CLAUDE.md from growing unwieldy. Guidance that migrates
+into templates can be removed from CLAUDE.md — reducing the instruction budget the agent
+consumes on content that's already being injected at the right moment via templates.
+
+---
+
+## Enforcement layer changes have their own merge cadence
+
+Changes to hooks are infrastructure changes. They should land on `main` independently,
+before the feature work that depends on them — not bundled into feature PRs.
+
+The concrete failure mode: a [TEST] PR adds TDD-aware hook changes alongside test files.
+The hook changes are necessary for the branch to work correctly, but they're now gated
+behind PR review of the test suite. If the PR isn't merged promptly, the next `test/*`
+branch inherits the broken hook behavior and hits the same problem again.
+
+**The right sequence:** identify the hook change needed → open a small dedicated PR →
+merge to main → then create the feature branch that depends on it.
+
+This also keeps your git history clean: hook changes are auditable separately from the
+features they enable, and the "why" of each change is in its own commit message rather
+than buried in a multi-file feature PR.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
