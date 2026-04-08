@@ -63,6 +63,7 @@ module = [
     "google.auth.*",
     "google.oauth2.*",
     "google_auth_oauthlib.*",
+    "yaml",
 ]
 ignore_missing_imports = true
 
