@@ -26,8 +26,5 @@ def pre_filter(items: list[ExcerptItem], interests: list[str]) -> list[ExcerptIt
     return [
         item
         for item in items
-        if any(
-            kw in item.title.lower() or kw in item.excerpt.lower()
-            for kw in lower_keywords
-        )
+        if any(kw in item.title.lower() or kw in item.excerpt.lower() for kw in lower_keywords)
     ]
