@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-08 (P3.1 + P3.2 complete)
+> **Last updated:** 2026-04-08 (P3.1 + P3.2 + P3.3 + P3.6 + P3.8 complete)
 
 ---
 
@@ -89,12 +89,12 @@
 |---|---|---|---|---|---|
 | P3.1 | [#29](https://github.com/lilacmohr/ai-radar/issues/29) ✅ | [#30](https://github.com/lilacmohr/ai-radar/issues/30) ✅ | `Source` ABC (`radar/sources/base.py`) | ✅ | §3.1 |
 | P3.2 | [#31](https://github.com/lilacmohr/ai-radar/issues/31) ✅ | [#32](https://github.com/lilacmohr/ai-radar/issues/32) ✅ | RSS connector (`radar/sources/rss.py`) | ✅ | §3.1 |
-| P3.3 | `[TEST]` | `[IMPL]` | HN connector | ⬜ | §3.1 |
+| P3.3 | [#43](https://github.com/lilacmohr/ai-radar/issues/43) ✅ | [#44](https://github.com/lilacmohr/ai-radar/issues/44) ✅ | HN connector (`radar/sources/hn.py`) | ✅ | §3.1 |
 | P3.4 | `[TEST]` | `[IMPL]` | ArXiv connector | ⬜ | §3.1 |
 | P3.5 | `[TEST]` | `[IMPL]` | Gmail connector | ⬜ | §3.1 (OAuth) |
-| P3.6 | `[TEST]` | `[IMPL]` | `deduplicator.py` (Phase 1 + 2) | ⬜ | §3.2 steps 2, 5 |
+| P3.6 | [#39](https://github.com/lilacmohr/ai-radar/issues/39) ✅ | [#40](https://github.com/lilacmohr/ai-radar/issues/40) ✅ | `deduplicator.py` (Phase 1 + 2) | ✅ | §3.2 steps 2, 5 |
 | P3.7 | `[TEST]` | `[IMPL]` | `excerpt_fetcher.py` | ⬜ | §3.2 step 4 |
-| P3.8 | `[TEST]` | `[IMPL]` | `pre_filter.py` | ⬜ | §3.2 step 6 |
+| P3.8 | [#41](https://github.com/lilacmohr/ai-radar/issues/41) ✅ | [#42](https://github.com/lilacmohr/ai-radar/issues/42) ✅ | `pre_filter.py` | ✅ | §3.2 step 6 |
 
 *Done when: pipeline runs from source fetch through pre-filter with no LLM calls, producing a `list[ExcerptItem]`.*
 
@@ -147,7 +147,7 @@ Spec v0.3 (✅)
             │
             └── P2: Foundation — models, config, cache (✅)
                     │
-                    └── P3: Sources & Processing (🔄 — P3.1 ✅, P3.2 ✅, P3.3–P3.8 ⬜)
+                    └── P3: Sources & Processing (🔄 — P3.1 ✅, P3.2 ✅, P3.3 ✅, P3.6 ✅, P3.8 ✅, P3.4–P3.5, P3.7 ⬜)
                             │
                             ├── [Prompt Templates required here]
                             │
@@ -174,7 +174,7 @@ using ai-radar as the reference implementation.
 | This roadmap | Pre-implementation phase structure for AI-first projects | ✅ |
 | Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ✅ |
 | Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ⬜ |
-| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 |
+| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (5 pairs complete: P2.1–P2.3, P3.1–P3.2, P3.3, P3.6, P3.8) |
 | ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | ⬜ |
 
 ---
@@ -204,4 +204,7 @@ using ai-radar as the reference implementation.
 5. **✅ P3 issue creation** — Issues #29–#32 created for P3.1 + P3.2 (2026-04-08)
 6. **✅ P3.1 complete** — Source ABC (issues #29, #30; PRs #33, #35) merged 2026-04-08; 111 tests passing
 7. **✅ P3.2 complete** — RSS connector (issues #31, #32; PRs #36, #37) merged 2026-04-08; 111 tests passing
-8. **⬜ P3.3–P3.8** — Remaining sources and processing modules; create issues before starting
+8. **✅ P3.8 complete** — `pre_filter.py` (issues #41, #42; PRs #45, #46) merged 2026-04-08
+9. **✅ P3.6 complete** — `deduplicator.py` (issues #39, #40; PRs #48, #49) merged 2026-04-08
+10. **✅ P3.3 complete** — HN connector (issues #43, #44; PRs #51, #52) merged 2026-04-08
+11. **⬜ P3.4, P3.5, P3.7** — ArXiv connector, Gmail connector, excerpt_fetcher; create issues before starting
