@@ -24,16 +24,30 @@ INPUT=$(cat)
 # If Stop hook already fired this turn, allow Claude to stop.
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
+  echo "[stop-gate] skipped — already ran this turn (anti-loop guard)" >&2
   exit 0
 fi
 
 # Only run tests if we're in the project root (guard against wrong-dir invocations)
 if [[ ! -f "pyproject.toml" ]]; then
+  echo "[stop-gate] skipped — pyproject.toml not found (wrong directory?)" >&2
   exit 0
 fi
 
 # Only run tests if there are Python files in the working tree
 if ! find tests -name "*.py" -maxdepth 4 2>/dev/null | grep -q .; then
+  echo "[stop-gate] skipped — no test files found" >&2
+  exit 0
+fi
+
+# TDD red-phase exception: test/* branches carry intentionally failing tests.
+# Run tests for visibility but do not block stopping.
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+if [[ "$CURRENT_BRANCH" == test/* ]]; then
+  echo "━━━ Stop Gate: TDD red-phase branch ($CURRENT_BRANCH) — running for visibility ━━━"
+  echo "[test] uv run pytest tests/ -x -q --tb=short"
+  timeout 120 uv run pytest tests/ -x -q --tb=short 2>&1 || true
+  echo "[stop-gate] passed — TDD red-phase branch, failures expected" >&2
   exit 0
 fi
 
@@ -41,13 +55,14 @@ echo "━━━ Stop Gate: Running test suite ━━━"
 echo "[test] uv run pytest tests/ -x -q --tb=short"
 
 if timeout 120 uv run pytest tests/ -x -q --tb=short 2>&1; then
-  echo "[✓] All tests pass. Task complete."
+  echo "[stop-gate] passed — all tests green" >&2
   exit 0
 else
   echo ""
   echo "[✗] Tests failed. Task is NOT complete."
   echo "    Fix the failing tests before finishing."
   echo "    (Claude will continue working.)"
+  echo "[stop-gate] blocked — tests failing" >&2
   # Exit 2 = blocking: Claude is forced to continue rather than stop
   exit 2
 fi

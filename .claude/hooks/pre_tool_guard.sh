@@ -47,10 +47,18 @@ deny() {
 
 # ── Guard 1: Block direct git commit ─────────────────────────────────────────
 # Commits must only happen after `make check` passes.
-# Claude should use: make check && git commit -m "..."
+# Exception: test/* branches are TDD red-phase branches where tests are
+# intentionally failing. Lint + typecheck still apply; the test gate is skipped.
+# Claude should use: make check && git commit (green branches)
+#                or: make lint && make typecheck && git commit (test/* branches)
 if [[ "$TOOL_NAME" == "Bash" ]]; then
   if echo "$COMMAND" | grep -qE '^\s*git commit'; then
-    deny "Direct git commit blocked. Run 'make check' first, then commit: make check && git commit -m 'message'. This ensures lint + typecheck + tests all pass before any commit."
+    CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+    if [[ "$CURRENT_BRANCH" == test/* ]]; then
+      : # TDD red-phase branch — allow commit without test gate
+    else
+      deny "Direct git commit blocked. Run 'make check' first, then commit: make check && git commit -m 'message'. This ensures lint + typecheck + tests all pass before any commit."
+    fi
   fi
 fi
 
