@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-08 (P2 complete — P3 issues to be created)
+> **Last updated:** 2026-04-08 (P3.1 + P3.2 complete)
 
 ---
 
@@ -87,8 +87,8 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P3.1 | `[TEST]` | `[IMPL]` | `Source` ABC | 🔒 | §3.1 |
-| P3.2 | `[TEST]` | `[IMPL]` | RSS connector | ⬜ | §3.1 |
+| P3.1 | [#29](https://github.com/lilacmohr/ai-radar/issues/29) ✅ | [#30](https://github.com/lilacmohr/ai-radar/issues/30) ✅ | `Source` ABC (`radar/sources/base.py`) | ✅ | §3.1 |
+| P3.2 | [#31](https://github.com/lilacmohr/ai-radar/issues/31) ✅ | [#32](https://github.com/lilacmohr/ai-radar/issues/32) ✅ | RSS connector (`radar/sources/rss.py`) | ✅ | §3.1 |
 | P3.3 | `[TEST]` | `[IMPL]` | HN connector | ⬜ | §3.1 |
 | P3.4 | `[TEST]` | `[IMPL]` | ArXiv connector | ⬜ | §3.1 |
 | P3.5 | `[TEST]` | `[IMPL]` | Gmail connector | ⬜ | §3.1 (OAuth) |
@@ -141,13 +141,13 @@ Spec v0.3 (✅)
     │       ├── Issue Templates (✅)
     │       ├── Claude Hooks (✅)
     │       ├── Phase 0 Ticket Set (✅)
-    │       └── Prompt Templates (⬜)    ← before P4 tickets
+    │       └── Prompt Templates (✅)
     │
     └── P1: Repo Scaffolding (✅)
             │
             └── P2: Foundation — models, config, cache (✅)
                     │
-                    └── P3: Sources & Processing (⬜ — issues to be created)
+                    └── P3: Sources & Processing (🔄 — P3.1 ✅, P3.2 ✅, P3.3–P3.8 ⬜)
                             │
                             ├── [Prompt Templates required here]
                             │
@@ -174,7 +174,7 @@ using ai-radar as the reference implementation.
 | This roadmap | Pre-implementation phase structure for AI-first projects | ✅ |
 | Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ✅ |
 | Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ⬜ |
-| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | ⬜ |
+| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 |
 | ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | ⬜ |
 
 ---
@@ -201,4 +201,7 @@ using ai-radar as the reference implementation.
 2. **✅ Prompt templates** — Pass 1 + Pass 2 prompts in `radar/llm/prompts.py` (P0.5)
 3. **✅ P1 complete** — Scaffolding merged 2026-04-07
 4. **✅ P2 complete** — [IMPL] issues #17, #18, #19 merged in PR #27 (2026-04-08); 87 tests passing
-5. **⬜ P3 issue creation** — Create `[TEST]` + `[IMPL]` issues for P3.1 (Source ABC) and P3.2 (RSS connector) to start; validate pattern before creating remaining P3 issues
+5. **✅ P3 issue creation** — Issues #29–#32 created for P3.1 + P3.2 (2026-04-08)
+6. **✅ P3.1 complete** — Source ABC (issues #29, #30; PRs #33, #35) merged 2026-04-08; 111 tests passing
+7. **✅ P3.2 complete** — RSS connector (issues #31, #32; PRs #36, #37) merged 2026-04-08; 111 tests passing
+8. **⬜ P3.3–P3.8** — Remaining sources and processing modules; create issues before starting

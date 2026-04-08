@@ -366,4 +366,36 @@ type `Literal[...]` rather than `str`?"*
 
 ---
 
+## Import ordering regressions between [TEST] and [IMPL] phases
+
+When a test file imports a module that doesn't exist yet (TDD red phase), formatters
+like ruff can't resolve the import, so they may classify it differently than they will
+once the module exists and is recognized as first-party. This produces a predictable,
+repeating failure: the test file passes `make lint` in the [TEST] PR, then fails lint
+in the [IMPL] PR because the new module changes how the formatter groups imports.
+
+This isn't a one-time edge case — it will recur for every [TEST]/[IMPL] pair where the
+module is new. In a project with many modules, you'll see this failure in most [IMPL] PRs.
+
+**The fix:** as part of [IMPL] work, run `make lint` against the full test suite — not
+just the new module. Expect to need a mechanical import-reorder in the test file. This
+is not a test logic change and doesn't violate the "don't modify test files" rule. The
+[IMPL] PR description should explicitly note when this fix is included so reviewers can
+confirm it's mechanical only (import order, not assertions or behavior).
+
+**The root cause fix:** configure your formatter to treat all first-party packages
+explicitly rather than relying on auto-detection. In ruff, this is `known-first-party`
+in `[tool.ruff.lint.isort]`. Once set, the sort order is stable whether or not the
+module being imported has been created yet.
+
+**The "don't modify test files" rule has a scope:** it means "don't change what
+behavior the tests verify." Mechanical lint fixes — import ordering, removing imports
+that are now unused because a stub was deleted — are infrastructure, not test logic.
+The rule exists to prevent an [IMPL] agent from weakening assertions to make tests pass;
+it shouldn't block obvious maintenance. When in doubt: if the change would make a
+currently-passing test fail or a currently-failing test pass, it's a logic change.
+If it wouldn't, it's maintenance.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
