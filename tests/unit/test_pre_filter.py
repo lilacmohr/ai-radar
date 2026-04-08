@@ -173,9 +173,7 @@ def test_large_list_returns_correct_subset() -> None:
         for i in range(100)
     ]
     non_matching = [
-        _make_excerpt_item(
-            title=f"Unrelated topic {i}", url=f"https://example.com/x{i}"
-        )
+        _make_excerpt_item(title=f"Unrelated topic {i}", url=f"https://example.com/x{i}")
         for i in range(100)
     ]
     items = matching + non_matching
@@ -217,9 +215,7 @@ def test_order_of_returned_items_preserved() -> None:
 
 def test_non_matching_item_not_in_result() -> None:
     matching = _make_excerpt_item(title="LLM paper", url="https://example.com/match")
-    non_matching = _make_excerpt_item(
-        title="Stock market", url="https://example.com/nomatch"
-    )
+    non_matching = _make_excerpt_item(title="Stock market", url="https://example.com/nomatch")
     result = pre_filter([matching, non_matching], ["LLM"])
     assert matching in result
     assert non_matching not in result
