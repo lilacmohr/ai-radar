@@ -10,9 +10,9 @@ from abc import ABCMeta
 from datetime import UTC, datetime
 
 import pytest
-from radar.sources.base import Source
 
 from radar.models import RawItem
+from radar.sources.base import Source
 
 # ---------------------------------------------------------------------------
 # Shared test values
