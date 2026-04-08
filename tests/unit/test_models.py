@@ -413,6 +413,72 @@ def test_score_int_not_accepted_as_float() -> None:
     assert not isinstance(item.score, float)
 
 
+# ---------------------------------------------------------------------------
+# Score range and word count constraints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad_score", [0, 11, -1, 100])
+def test_scored_item_raises_on_score_out_of_range(bad_score: int) -> None:
+    """ScoredItem.score must be 1-10 per SPEC.md §3.1; out-of-range must raise."""
+    with pytest.raises(ValueError, match=r"score|range|value"):
+        ScoredItem(
+            url="https://example.com",
+            title="Title",
+            source="rss",
+            published_at=PUBLISHED_AT,
+            excerpt="Excerpt",
+            score=bad_score,
+            summary="Summary",
+        )
+
+
+@pytest.mark.parametrize("bad_score", [0, 11, -1, 100])
+def test_full_item_raises_on_score_out_of_range(bad_score: int) -> None:
+    """FullItem.score must be 1-10 (carried from Pass 1); out-of-range must raise."""
+    with pytest.raises(ValueError, match=r"score|range|value"):
+        FullItem(
+            url="https://example.com",
+            title="Title",
+            source="rss",
+            published_at=PUBLISHED_AT,
+            full_text="Full text",
+            word_count=EXPECTED_WORD_COUNT,
+            score=bad_score,
+            summary="Summary",
+        )
+
+
+def test_normalized_item_raises_on_negative_word_count() -> None:
+    """word_count must be >= 0; negative values are impossible and must raise."""
+    with pytest.raises(ValueError, match=r"word_count|negative|range|value"):
+        NormalizedItem(
+            url="https://example.com",
+            title="Title",
+            source="rss",
+            published_at=PUBLISHED_AT,
+            clean_text="text",
+            word_count=-1,
+            url_hash="abc",
+            content_hash="def",
+        )
+
+
+def test_full_item_raises_on_negative_word_count() -> None:
+    """word_count must be >= 0; negative values are impossible and must raise."""
+    with pytest.raises(ValueError, match=r"word_count|negative|range|value"):
+        FullItem(
+            url="https://example.com",
+            title="Title",
+            source="rss",
+            published_at=PUBLISHED_AT,
+            full_text="Full text",
+            word_count=-1,
+            score=EXPECTED_SCORE,
+            summary="Summary",
+        )
+
+
 @pytest.mark.parametrize(
     "content_type",
     ["email", "web", "arxiv"],

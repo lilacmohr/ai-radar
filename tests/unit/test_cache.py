@@ -180,6 +180,33 @@ def test_is_seen_matches_on_content_hash_alone(temp_cache_dir: Path) -> None:
     assert cache.is_seen(content_hash=CONTENT_HASH_A) is True
 
 
+def test_is_seen_or_semantics_when_both_hashes_provided(
+    temp_cache_dir: Path,
+) -> None:
+    """is_seen uses OR logic: seen if EITHER hash matches, not both required.
+
+    Concrete case: url_hash matches (in cache), content_hash does not (not in cache).
+    Result must be True — the url_hash match alone is sufficient.
+    This mirrors Phase 1 dedup: a URL already seen blocks re-fetch regardless of
+    whether its content hash was also stored.
+    """
+    db_path = temp_cache_dir / "radar.db"
+    cache = Cache(db_path)
+    cache.mark_seen(url_hash=URL_HASH_A, content_hash=CONTENT_HASH_A)
+    # url_hash_A is in cache; content_hash_B is NOT in cache
+    assert cache.is_seen(url_hash=URL_HASH_A, content_hash=CONTENT_HASH_B) is True
+
+
+def test_is_seen_returns_false_when_neither_hash_matches(
+    temp_cache_dir: Path,
+) -> None:
+    """is_seen returns False when both hashes are provided and neither is in cache."""
+    db_path = temp_cache_dir / "radar.db"
+    cache = Cache(db_path)
+    cache.mark_seen(url_hash=URL_HASH_A, content_hash=CONTENT_HASH_A)
+    assert cache.is_seen(url_hash=URL_HASH_B, content_hash=CONTENT_HASH_B) is False
+
+
 def test_is_seen_returns_false_for_different_url_hash(temp_cache_dir: Path) -> None:
     db_path = temp_cache_dir / "radar.db"
     cache = Cache(db_path)
@@ -300,6 +327,7 @@ def test_cache_starts_clean_after_db_file_deleted_and_recreated(
     cache.mark_seen(url_hash=URL_HASH_A, content_hash=CONTENT_HASH_A)
     # Delete the file
     db_path.unlink()
-    # Recreate — must start clean
+    # Recreate — must create a new file and start clean
     cache2 = Cache(db_path)
+    assert db_path.exists()
     assert cache2.is_seen(url_hash=URL_HASH_A) is False

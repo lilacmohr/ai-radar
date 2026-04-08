@@ -211,6 +211,21 @@ def test_llm_backend_defaults_to_github_models_when_not_specified(
 # ---------------------------------------------------------------------------
 
 
+def test_hackernews_min_score_is_required(tmp_path: Path) -> None:
+    """sources.hackernews.min_score is required, not optional.
+
+    An omitted min_score must raise ValidationError — it has no default because
+    the right value is highly context-dependent (SPEC.md §3.1: 'tune after first runs').
+    """
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        "profile:\n  interests:\n    - LLM\n"
+        "sources:\n  hackernews:\n    enabled: true\n"
+    )
+    with pytest.raises(ValidationError, match="min_score"):
+        load_config(config_file)
+
+
 def test_load_config_raises_validation_error_on_missing_sources(
     tmp_path: Path,
 ) -> None:
