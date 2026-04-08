@@ -2,54 +2,63 @@
 # Copy to config.yaml and fill in your values.
 # config.yaml is gitignored — never commit it (it may contain feed URLs you prefer private).
 
+profile:
+  role: "AI engineer and technical architect"   # optional; used in Pass 2 synthesis prompt
+  interests:
+    # Describe what you want to read about. Used in Pass 1 scoring and Pass 2 synthesis.
+    # - "LLM inference and serving"
+    # - "agent frameworks and multi-agent systems"
+    # - "AI safety and alignment research"
+    # - "open-source models"
+    # - "developer tooling for AI"
+  relevance_threshold: 6  # articles scoring below this (1–10) are dropped after Pass 1; tune after first runs
+
 sources:
-  rss:
+  rss_feeds:
     enabled: true
     feeds:
       # Add RSS/Atom feed URLs here, one per line
-      # - https://example.com/feed.xml
-      # - https://blog.example.org/rss
+      # - name: "Anthropic Blog"
+      #   url: "https://www.anthropic.com/blog/rss"
+      # - name: "OpenAI Blog"
+      #   url: "https://openai.com/blog/rss"
 
   hackernews:
     enabled: true
-    min_score: 100          # minimum HN points to consider an item
+    min_score: 50           # minimum HN points to consider an item; tune after first runs
+    keywords: []            # optional keyword filter applied before Pass 1
 
   arxiv:
     enabled: false
-    categories:
-      # ArXiv category identifiers, e.g.:
-      # - cs.AI
-      # - cs.LG
-      # - stat.ML
+    categories: []          # ArXiv category identifiers, e.g. cs.AI, cs.LG, cs.CL
 
   gmail:
     enabled: false
-    label: "newsletters"    # Gmail label to monitor for newsletter emails
+    labels: ["newsletters"]
+    max_age_days: 1
+    newsletter_type: "link_list"  # only supported type in v0.1
+    senders: []             # filter to specific senders; leave empty to process all emails in label
 
-interests:
-  keywords:
-    # Case-insensitive keyword list for the pre-filter stage.
-    # Items whose title or excerpt match at least one keyword proceed to LLM Pass 1.
-    # Example:
-    # - "large language model"
-    # - "LLM"
-    # - "transformer"
-    # - "AI agent"
+  podcasts:
+    enabled: false          # post-MVP, not yet implemented
 
 llm:
   backend: "github_models"  # only supported backend in v0.1
-  pass1_model: "gpt-4o-mini"  # fast + low cost; used for Pass 1 relevance scoring
-  pass2_model: "gpt-4o"       # higher quality; used for Pass 2 synthesis
 
 pipeline:
-  max_items_pass1: 50         # cap on items sent to LLM Pass 1
-  pass1_score_threshold: 6    # minimum score (1–10) to survive to Pass 2
-  max_items_pass2: 10         # cap on items sent to LLM Pass 2
-  max_words_full: 2000        # truncation limit per article before Pass 2
-
-cache:
-  cache_ttl_days: 30          # days before a seen item expires from the dedup cache
+  max_words_excerpt: 200         # Pass 1 input truncation (words)
+  max_words_full: 800            # Pass 2 input truncation (words)
+  max_articles_to_summarize: 30  # cap on items sent to Pass 1; tune after first runs
+  max_articles_in_digest: 15     # cap on items sent to Pass 2; tune after first runs
+  batch_size: 10                 # articles per LLM call in Pass 1
+  summarization_model: "gpt-4o-mini"  # GitHub Models identifier
+  synthesis_model: "gpt-4o"          # GitHub Models identifier
+  user_agent: "ai-radar/0.1 (personal digest tool)"
+  cache_ttl_days: 30             # days before a seen item expires from the dedup cache
+  max_cost_per_run: 0.10         # optional hard limit in USD; set to 0 to disable
 
 output:
-  digest_dir: "digests"       # directory for generated digest files (relative to repo root)
-  commit_digests: false       # if true, auto-commit digest files after each run
+  format: "markdown"
+  output_dir: "./digests"
+  filename_pattern: "briefing_{date}.md"
+  commit_digests: false     # if true, auto-commit digest files after each run
