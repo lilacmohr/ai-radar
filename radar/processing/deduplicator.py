@@ -105,9 +105,7 @@ def _normalize_url(url: str) -> str:
     parsed = urlparse(url)
     params = parse_qs(parsed.query, keep_blank_values=True)
     filtered = {
-        k: v
-        for k, v in params.items()
-        if not k.startswith("utm_") and k not in _TRACKING_PARAMS
+        k: v for k, v in params.items() if not k.startswith("utm_") and k not in _TRACKING_PARAMS
     }
     clean_query = urlencode(filtered, doseq=True)
     normalized = parsed._replace(

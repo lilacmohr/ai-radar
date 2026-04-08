@@ -77,9 +77,7 @@ def test_url_to_hash_returns_string() -> None:
 
 def test_url_to_hash_strips_utm_params() -> None:
     clean = url_to_hash("https://example.com/article")
-    with_utm = url_to_hash(
-        "https://example.com/article?utm_source=newsletter&utm_medium=email"
-    )
+    with_utm = url_to_hash("https://example.com/article?utm_source=newsletter&utm_medium=email")
     assert clean == with_utm
 
 
@@ -128,9 +126,7 @@ def test_dedup_by_url_mixed_returns_only_unseen(cache: Cache) -> None:
 
 
 def test_dedup_by_url_order_preserved(cache: Cache) -> None:
-    items = [
-        _make_raw_item(url=f"https://example.com/{i}") for i in range(5)
-    ]
+    items = [_make_raw_item(url=f"https://example.com/{i}") for i in range(5)]
     result = dedup_by_url(items, cache)
     assert [r.url for r in result] == [item.url for item in items]
 
