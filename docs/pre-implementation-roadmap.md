@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-07 (P1 complete)
+> **Last updated:** 2026-04-08 (P2 [TEST] complete — [IMPL] ready to start)
 
 ---
 
@@ -26,8 +26,7 @@
 | v0.3 | 7.34 / 10 | 2026-04-05 | ✅ Implementation-ready |
 
 **Remaining spec gaps (deferred, not blocking):**
-- Prompt templates for Pass 1 + Pass 2 (spec gap #1 — highest impact, address before Phase 3)
-- Per-module acceptance criteria (will emerge from TDD test files)
+- Per-module acceptance criteria (emerging from TDD test files — P2 test files now serve this purpose)
 - Processing module method signatures (agents will raise DECISION NEEDED as needed)
 
 ---
@@ -74,9 +73,9 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P2.1 | [#14](https://github.com/lilacmohr/ai-radar/issues/14) | [#17](https://github.com/lilacmohr/ai-radar/issues/17) | `radar/models.py` | ⬜ | §3.1, §4.2 |
-| P2.2 | [#15](https://github.com/lilacmohr/ai-radar/issues/15) | [#18](https://github.com/lilacmohr/ai-radar/issues/18) | `radar/config.py` | ⬜ | §3.5 |
-| P2.3 | [#16](https://github.com/lilacmohr/ai-radar/issues/16) | [#19](https://github.com/lilacmohr/ai-radar/issues/19) | `radar/cache.py` | ⬜ | §4.4 |
+| P2.1 | [#14](https://github.com/lilacmohr/ai-radar/issues/14) ✅ | [#17](https://github.com/lilacmohr/ai-radar/issues/17) | `radar/models.py` | 🔄 | §3.1, §4.2 |
+| P2.2 | [#15](https://github.com/lilacmohr/ai-radar/issues/15) ✅ | [#18](https://github.com/lilacmohr/ai-radar/issues/18) | `radar/config.py` | 🔄 | §3.5 |
+| P2.3 | [#16](https://github.com/lilacmohr/ai-radar/issues/16) ✅ | [#19](https://github.com/lilacmohr/ai-radar/issues/19) | `radar/cache.py` | 🔄 | §4.4 |
 
 *Done when: all dataclasses defined, config loads and validates, cache reads/writes correctly.*
 
@@ -146,7 +145,7 @@ Spec v0.3 (✅)
     │
     └── P1: Repo Scaffolding (⬜)
             │
-            └── P2: Foundation — models, config, cache (⬜)
+            └── P2: Foundation — models, config, cache (🔄)
                     │
                     └── P3: Sources & Processing (⬜)
                             │
@@ -199,5 +198,6 @@ using ai-radar as the reference implementation.
 ## Next Actions
 
 1. **✅ Phase 0 ticket set** — `[SCAFFOLD]` GitHub Issues #3–#11 created for P1.1–P1.9
-2. **⬜ Prompt templates** — Draft Pass 1 + Pass 2 prompts before Phase 4 tickets are written (P0.5)
-3. **⬜ Begin P1** — Execute scaffolding issues with Claude Code; capture decisions as `[DECISION]` issues
+2. **✅ Prompt templates** — Pass 1 + Pass 2 prompts in `radar/llm/prompts.py` (P0.5)
+3. **✅ P1 complete** — Scaffolding merged 2026-04-07
+4. **🔄 P2 [IMPL]** — Execute [IMPL] issues #17, #18, #19 with Claude Code; tests on main define acceptance criteria
