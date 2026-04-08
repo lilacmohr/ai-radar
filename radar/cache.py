@@ -47,6 +47,12 @@ class Cache:
 
     is_seen uses OR semantics: an item is seen if EITHER url_hash OR
     content_hash matches an entry in the cache.
+
+    Connection management: each method opens and closes its own connection.
+    sqlite3's context manager (`with connect(...) as conn`) handles transaction
+    commit/rollback but does NOT close the connection — connections are released
+    when the local variable goes out of scope. This is intentional: the pipeline
+    is a short-lived daily batch process, so connection pooling is unnecessary.
     """
 
     def __init__(self, db_path: Path) -> None:

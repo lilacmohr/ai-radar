@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal
 # Third-party imports
 import structlog
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = structlog.get_logger(__name__)
 
@@ -31,7 +31,7 @@ class ProfileConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    role: str = ""
+    role: str | None = None
     interests: Annotated[list[str], Field(min_length=1)]
     relevance_threshold: Annotated[int, Field(ge=1, le=10)] = 6
 
@@ -46,7 +46,7 @@ class HackerNewsConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    enabled: bool = True
+    enabled: bool = False
     min_score: int  # required — no default; tune after first runs (SPEC.md §3.1)
     keywords: list[str] = []
 
@@ -100,11 +100,16 @@ class GmailConfig(BaseModel):
 
 
 class SourcesConfig(BaseModel):
-    """All source connector configs. hackernews is required."""
+    """All source connector configs. All sources are optional (None = not configured).
+
+    hackernews requires min_score when provided — it has no sensible default
+    (SPEC.md §3.1: "tune after first runs"). pipeline.py must check for None
+    before accessing any source config.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    hackernews: HackerNewsConfig
+    hackernews: HackerNewsConfig | None = None
     arxiv: ArxivConfig = Field(default_factory=ArxivConfig)
     rss_feeds: RssFeedsConfig = Field(default_factory=RssFeedsConfig)
     gmail: GmailConfig = Field(default_factory=GmailConfig)
@@ -199,7 +204,3 @@ def load_config(path: Path) -> Config:
     config = Config.model_validate(data)
     logger.info("config_loaded", path=str(path))
     return config
-
-
-# Re-export ValidationError so callers can catch it without importing pydantic directly.
-__all__ += ["ValidationError"]

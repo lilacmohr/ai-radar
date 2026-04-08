@@ -11,7 +11,7 @@ Spec reference: SPEC.md §3.1 (data models), §4.2 (data flow).
 # Standard library imports
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 _SCORE_MIN = 1
 _SCORE_MAX = 10
@@ -29,7 +29,7 @@ class RawItem:
     source: str
     published_at: datetime
     raw_content: str
-    content_type: str
+    content_type: Literal["email", "web", "arxiv"]
 
 
 @dataclass
@@ -125,6 +125,11 @@ class Digest:
 
     Stage: output of Synthesizer (LLM Pass 2), input to MarkdownRenderer.
     articles is list[ScoredItem] — zero-length is valid (SPEC.md §3.7, exit code 0).
+
+    articles holds ScoredItem (Pass 1 output), not FullItem. The full_text fetched
+    for Pass 2 input is consumed by the Synthesizer and discarded — it is not part
+    of the digest data model. pipeline.py reconstructs the ScoredItem list from Pass 1
+    output when building the Digest.
     """
 
     date: date
