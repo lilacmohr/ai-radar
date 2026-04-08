@@ -290,6 +290,10 @@ make typecheck     # mypy --strict
 make check         # lint + typecheck + test (required before PR)
 ```
 
+**Always use `make lint` — never `ruff check` alone.** `make lint` runs both
+`ruff check` (linting) and `ruff format --check` (formatting). Running only
+`ruff check` misses formatting violations.
+
 **All of these must pass before a task is considered complete.**
 
 ---
