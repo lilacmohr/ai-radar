@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-08 (P2 [TEST] complete — [IMPL] ready to start)
+> **Last updated:** 2026-04-08 (P2 complete — P3 issues to be created)
 
 ---
 
@@ -73,11 +73,11 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P2.1 | [#14](https://github.com/lilacmohr/ai-radar/issues/14) ✅ | [#17](https://github.com/lilacmohr/ai-radar/issues/17) | `radar/models.py` | 🔄 | §3.1, §4.2 |
-| P2.2 | [#15](https://github.com/lilacmohr/ai-radar/issues/15) ✅ | [#18](https://github.com/lilacmohr/ai-radar/issues/18) | `radar/config.py` | 🔄 | §3.5 |
-| P2.3 | [#16](https://github.com/lilacmohr/ai-radar/issues/16) ✅ | [#19](https://github.com/lilacmohr/ai-radar/issues/19) | `radar/cache.py` | 🔄 | §4.4 |
+| P2.1 | [#14](https://github.com/lilacmohr/ai-radar/issues/14) ✅ | [#17](https://github.com/lilacmohr/ai-radar/issues/17) ✅ | `radar/models.py` | ✅ | §3.1, §4.2 |
+| P2.2 | [#15](https://github.com/lilacmohr/ai-radar/issues/15) ✅ | [#18](https://github.com/lilacmohr/ai-radar/issues/18) ✅ | `radar/config.py` | ✅ | §3.5 |
+| P2.3 | [#16](https://github.com/lilacmohr/ai-radar/issues/16) ✅ | [#19](https://github.com/lilacmohr/ai-radar/issues/19) ✅ | `radar/cache.py` | ✅ | §4.4 |
 
-*Done when: all dataclasses defined, config loads and validates, cache reads/writes correctly.*
+*Done when: all dataclasses defined, config loads and validates, cache reads/writes correctly.* ✅ Complete — PR #27 merged 2026-04-08.
 
 ---
 
@@ -87,7 +87,7 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P3.1 | `[TEST]` | `[IMPL]` | `Source` ABC | ⬜ | §3.1 |
+| P3.1 | `[TEST]` | `[IMPL]` | `Source` ABC | 🔒 | §3.1 |
 | P3.2 | `[TEST]` | `[IMPL]` | RSS connector | ⬜ | §3.1 |
 | P3.3 | `[TEST]` | `[IMPL]` | HN connector | ⬜ | §3.1 |
 | P3.4 | `[TEST]` | `[IMPL]` | ArXiv connector | ⬜ | §3.1 |
@@ -143,11 +143,11 @@ Spec v0.3 (✅)
     │       ├── Phase 0 Ticket Set (✅)
     │       └── Prompt Templates (⬜)    ← before P4 tickets
     │
-    └── P1: Repo Scaffolding (⬜)
+    └── P1: Repo Scaffolding (✅)
             │
-            └── P2: Foundation — models, config, cache (🔄)
+            └── P2: Foundation — models, config, cache (✅)
                     │
-                    └── P3: Sources & Processing (⬜)
+                    └── P3: Sources & Processing (⬜ — issues to be created)
                             │
                             ├── [Prompt Templates required here]
                             │
@@ -200,4 +200,5 @@ using ai-radar as the reference implementation.
 1. **✅ Phase 0 ticket set** — `[SCAFFOLD]` GitHub Issues #3–#11 created for P1.1–P1.9
 2. **✅ Prompt templates** — Pass 1 + Pass 2 prompts in `radar/llm/prompts.py` (P0.5)
 3. **✅ P1 complete** — Scaffolding merged 2026-04-07
-4. **🔄 P2 [IMPL]** — Execute [IMPL] issues #17, #18, #19 with Claude Code; tests on main define acceptance criteria
+4. **✅ P2 complete** — [IMPL] issues #17, #18, #19 merged in PR #27 (2026-04-08); 87 tests passing
+5. **⬜ P3 issue creation** — Create `[TEST]` + `[IMPL]` issues for P3.1 (Source ABC) and P3.2 (RSS connector) to start; validate pattern before creating remaining P3 issues
