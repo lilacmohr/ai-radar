@@ -125,12 +125,15 @@ body:
       description: "Acceptance criteria for THIS issue (not the implementation). The test file is done when:"
       value: |
         - [ ] Test file exists at the path specified above
-        - [ ] All tests in the file FAIL (red) — no implementation exists yet
+        - [ ] All tests FAIL (red) — confirmed with `uv run pytest <test_file> -v`
+        - [ ] Tests collect as **FAIL**, not **ERROR** (create a minimal stub module if needed — see agent instructions below)
         - [ ] Every happy path case has at least one test
         - [ ] Every failure mode has at least one test
         - [ ] Empty input case is covered
         - [ ] `make lint` passes on the test file itself (no syntax errors, typed fixtures)
         - [ ] Test names are descriptive: `test_pre_filter_passes_on_keyword_in_excerpt`
+        - [ ] Any spec ambiguities encountered while writing tests are documented as `[DECISION]` issues — not silently resolved in test code
+        - [ ] PR description includes an "Interface decisions made" section listing any interpretive calls, even obvious ones
         - [ ] Paired `[IMPL]` issue is linked below before closing this issue
     validations:
       required: true
@@ -148,9 +151,11 @@ body:
     attributes:
       value: |
         ---
-        **Agent instructions:** 
+        **Agent instructions:**
         1. Read `CLAUDE.md` and `SPEC.md` at the sections referenced above before writing any code.
-        2. Write the test file only. Do not create or modify any file in `radar/`.
-        3. Run `make test-unit` — confirm all new tests fail for the right reason: the implementation does not exist yet (expected failures: `ModuleNotFoundError`, `AttributeError`, `TypeError`, or `ImportError` — not assertion errors, which would mean implementation already exists).
-        4. Run `make lint` — confirm the test file is clean.
-        5. Create the paired `[IMPL]` issue and add its number in the field above before closing this issue.
+        2. Write the test file only. Do not write implementation logic in `radar/`.
+        3. Create a **minimal stub** for the module under test (empty classes/functions with correct signatures but no logic). This allows pytest to collect tests as **FAIL** rather than **ERROR**. Stubs are infrastructure, not implementation — they must not contain any real logic.
+        4. Run `uv run pytest <test_file> -v` — confirm all behavioral tests show **FAILED**, not **ERROR**. A test that shows ERROR means pytest couldn't collect it; fix the stub until it shows FAILED.
+        5. If any assertion requires an interpretive call not explicitly in the spec (semantics, required vs optional, error types), open a `[DECISION]` issue **before** encoding the choice in test code.
+        6. Run `make lint` — confirm the test file and stub are clean.
+        7. Create the paired `[IMPL]` issue and add its number in the field above before closing this issue.

@@ -237,6 +237,13 @@ Tests are written BEFORE implementation. Every GitHub Issue comes in a pair:
 
 **Do not write implementation code until the test file exists and is failing.**
 
+**The `DECISION NEEDED` protocol (§3) applies during `[TEST]` work, not just
+`[IMPL]`.** Any spec ambiguity that forces an interpretive choice in a test
+assertion — semantics, required vs optional fields, validation rules, error
+types — should be opened as a `[DECISION]` issue rather than silently resolved
+in test code. The test file is the executable spec; decisions baked into it
+without review are invisible to future agents and engineers.
+
 ### 6.2 Test Structure
 
 ```
