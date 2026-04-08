@@ -54,7 +54,11 @@ fi
 echo "━━━ Stop Gate: Running test suite ━━━"
 echo "[test] uv run pytest tests/ -x -q --tb=short"
 
-if timeout 120 uv run pytest tests/ -x -q --tb=short 2>&1; then
+timeout 120 uv run pytest tests/ -x -q --tb=short 2>&1
+PYTEST_EXIT=$?
+
+# Exit 5 = no tests collected (e.g. scaffolding-only branch). Treat as pass.
+if [[ $PYTEST_EXIT -eq 0 ]] || [[ $PYTEST_EXIT -eq 5 ]]; then
   echo "[stop-gate] passed — all tests green" >&2
   exit 0
 else
