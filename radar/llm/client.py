@@ -45,9 +45,16 @@ class LLMClient:
             api_key=token,
         )
 
-    def complete(self, system: str, user: str, model: str) -> str:
+    def complete(
+        self,
+        system: str,
+        user: str,
+        model: str,
+        response_format: dict[str, str] | None = None,
+    ) -> str:
         """Send a chat completion request and return the response text.
 
+        Pass response_format={"type": "json_object"} to enable JSON mode.
         Retries up to _MAX_RETRIES times on transient errors (429, 5xx, timeout)
         with exponential backoff. Re-raises on exhaustion. Non-retryable errors
         (4xx other than 429) are raised immediately without retrying.
@@ -56,13 +63,16 @@ class LLMClient:
 
         for attempt in range(_MAX_RETRIES + 1):
             try:
-                response = self._client.chat.completions.create(
-                    model=model,
-                    messages=[
+                kwargs: dict[str, object] = {
+                    "model": model,
+                    "messages": [
                         {"role": "system", "content": system},
                         {"role": "user", "content": user},
                     ],
-                )
+                }
+                if response_format is not None:
+                    kwargs["response_format"] = response_format
+                response = self._client.chat.completions.create(**kwargs)  # type: ignore[call-overload]
                 return str(response.choices[0].message.content)
 
             except openai.APIStatusError as exc:

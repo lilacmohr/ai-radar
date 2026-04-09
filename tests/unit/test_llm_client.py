@@ -281,3 +281,29 @@ def test_return_type_is_str_not_none(monkeypatch: pytest.MonkeyPatch) -> None:
         result = LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
     assert result is not None
     assert type(result) is str
+
+
+# ---------------------------------------------------------------------------
+# response_format passthrough
+# ---------------------------------------------------------------------------
+
+
+def test_response_format_forwarded_to_api_when_provided(monkeypatch: pytest.MonkeyPatch) -> None:
+    """response_format kwarg must be forwarded to the underlying API call."""
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    fmt = {"type": "json_object"}
+    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
+        mock_create = mock_openai.return_value.chat.completions.create
+        mock_create.return_value = _make_openai_response()
+        LLMClient().complete(system="s", user="u", model="gpt-4o-mini", response_format=fmt)
+        assert mock_create.call_args.kwargs["response_format"] == fmt
+
+
+def test_response_format_omitted_from_api_when_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When response_format=None, the key must not appear in the API call kwargs."""
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
+        mock_create = mock_openai.return_value.chat.completions.create
+        mock_create.return_value = _make_openai_response()
+        LLMClient().complete(system="s", user="u", model="gpt-4o-mini", response_format=None)
+        assert "response_format" not in mock_create.call_args.kwargs
