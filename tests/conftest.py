@@ -25,11 +25,19 @@ class TestLLMClient:
     def __init__(self, responses: list[str] | None = None) -> None:
         self.responses: list[str] = responses or []
         self.call_count: int = 0
-        self.calls: list[dict[str, str]] = []
+        self.calls: list[dict[str, object]] = []
 
-    def complete(self, system: str, user: str, model: str) -> str:
+    def complete(
+        self,
+        system: str,
+        user: str,
+        model: str,
+        response_format: dict[str, str] | None = None,
+    ) -> str:
         """Return the next canned response, cycling if exhausted."""
-        self.calls.append({"system": system, "user": user, "model": model})
+        self.calls.append(
+            {"system": system, "user": user, "model": model, "response_format": response_format}
+        )
         response = self.responses[self.call_count % len(self.responses)] if self.responses else ""
         self.call_count += 1
         return response

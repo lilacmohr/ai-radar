@@ -426,3 +426,48 @@ def test_constructor_has_expected_parameters() -> None:
     assert "client" in params
     assert "config" in params
     assert "profile" in params
+
+
+# ---------------------------------------------------------------------------
+# JSON response format (SPEC §3.3)
+# ---------------------------------------------------------------------------
+
+
+def test_json_response_format_requested_on_first_call() -> None:
+    """Summarizer must request JSON mode on every LLM call (SPEC §3.3)."""
+    item = _make_excerpt_item()
+    client = TestLLMClient(responses=[_llm_response(url=item.url)])
+    Summarizer(client, _make_config(), _make_profile()).summarize([item])
+    assert client.calls[0]["response_format"] == {"type": "json_object"}
+
+
+def test_json_response_format_requested_on_retry() -> None:
+    """JSON mode must also be requested on the retry call after parse failure."""
+    item = _make_excerpt_item()
+    client = TestLLMClient(responses=["not json", _llm_response(url=item.url)])
+    Summarizer(client, _make_config(), _make_profile()).summarize([item])
+    assert client.call_count == 2  # noqa: PLR2004
+    assert client.calls[1]["response_format"] == {"type": "json_object"}
+
+
+# ---------------------------------------------------------------------------
+# Markdown fence stripping
+# ---------------------------------------------------------------------------
+
+
+def test_markdown_fenced_response_parsed_correctly() -> None:
+    """_try_parse must handle ```json ... ``` wrapped responses."""
+    item = _make_excerpt_item()
+    fenced = f"```json\n{_llm_response(url=item.url)}\n```"
+    client = TestLLMClient(responses=[fenced])
+    result = Summarizer(client, _make_config(), _make_profile()).summarize([item])
+    assert len(result) == 1
+
+
+def test_plain_fence_without_language_tag_parsed_correctly() -> None:
+    """_try_parse must handle ``` ... ``` fences with no language tag."""
+    item = _make_excerpt_item()
+    fenced = f"```\n{_llm_response(url=item.url)}\n```"
+    client = TestLLMClient(responses=[fenced])
+    result = Summarizer(client, _make_config(), _make_profile()).summarize([item])
+    assert len(result) == 1

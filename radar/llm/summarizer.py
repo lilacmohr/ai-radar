@@ -23,6 +23,7 @@ from radar.models import ExcerptItem, ScoredItem
 logger = structlog.get_logger(__name__)
 
 _JSON_RETRY_SUFFIX = "\n\nReturn only a JSON array. No other text."
+_JSON_RESPONSE_FORMAT: dict[str, str] = {"type": "json_object"}
 _SCORE_MIN = 1
 _SCORE_MAX = 10
 
@@ -75,14 +76,19 @@ class Summarizer:
         user = _format_user_prompt(batch)
 
         model = self._config.summarization_model
-        raw = self._client.complete(system=system, user=user, model=model)
+        raw = self._client.complete(
+            system=system, user=user, model=model, response_format=_JSON_RESPONSE_FORMAT
+        )
         parsed = _try_parse(raw)
 
         if parsed is None:
             # First failure: retry with explicit JSON instruction
             retry_user = user + _JSON_RETRY_SUFFIX
             raw = self._client.complete(
-                system=system, user=retry_user, model=self._config.summarization_model
+                system=system,
+                user=retry_user,
+                model=model,
+                response_format=_JSON_RESPONSE_FORMAT,
             )
             parsed = _try_parse(raw)
 
@@ -115,9 +121,16 @@ def _format_user_prompt(batch: list[ExcerptItem]) -> str:
 
 
 def _try_parse(raw: str) -> list[dict[str, object]] | None:
-    """Return parsed JSON list, or None on any parse/type error."""
+    """Return parsed JSON list, or None on any parse/type error.
+
+    Strips markdown code fences (e.g. ```json ... ```) before parsing —
+    some models emit fences even when instructed not to.
+    """
+    stripped = raw.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
     try:
-        result = json.loads(raw)
+        result = json.loads(stripped)
         if isinstance(result, list):
             return result
     except (json.JSONDecodeError, ValueError):
@@ -161,7 +174,7 @@ def _build_scored_items(
                 published_at=source_item.published_at,
                 excerpt=source_item.excerpt,
                 score=score,
-                summary=str(entry.get("summary", "")),
+                summary=str(entry.get("summary") or ""),
             )
         )
 
