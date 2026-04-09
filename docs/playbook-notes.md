@@ -539,4 +539,40 @@ completion gate where the cost is justified.
 
 ---
 
+## [REFACTOR] issues: capture debt without blocking progress
+
+When you notice a structural problem — a violated rule, a testability gap, a
+workaround that should be replaced — the worst options are: fix it immediately
+(interrupts the current task, bundles unrelated changes in a PR) or leave it as
+a TODO comment (invisible to planning, never prioritized, eventually forgotten).
+
+A `[REFACTOR]` issue is the right middle ground. It captures:
+- **What** needs to change (concrete enough for an agent to implement without follow-up)
+- **Why** it matters (which rule or standard is violated, with a reference)
+- **What must not change** (observable behavior, test assertions, public interfaces)
+
+**When to open a `[REFACTOR]` issue instead of fixing inline:**
+- The fix touches files not in scope for the current PR
+- The fix is mechanical but non-trivial — worth review on its own
+- The current task is in a different phase (e.g. noticing a structural problem in `[TEST]` work that belongs in an `[IMPL]` concern)
+- The problem is real but non-blocking — deferring it is safe
+
+**When to just fix it inline:**
+- The fix is in a file already being changed
+- It's a one-line correction with no behavioral risk
+- Deferring it would make the current code actively misleading
+
+**The key property of a good `[REFACTOR]` issue:** an agent should be able to
+open it, implement the change, run `make check`, and close it — without any
+ambiguity about what "done" means or risk of accidentally changing behavior.
+The "What Must Not Change" field is what makes this reliable: it forces you to
+articulate the behavioral boundary before the work starts, not during.
+
+**Refactor issues are safe to defer, but not safe to ignore.** Review open
+`[REFACTOR]` issues at the start of each phase. If a refactor issue touches a
+module that's about to be worked on, close it first — doing the refactor and
+the feature in the same PR creates noise and makes the PR harder to review.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
