@@ -398,4 +398,73 @@ If it wouldn't, it's maintenance.
 
 ---
 
+## Use build system targets, not direct tool invocations
+
+`make lint` runs `ruff check` AND `ruff format --check`. Running `ruff check`
+alone misses formatting violations — all linting passes but the CI `make lint`
+step fails. The same issue applies to any make target that wraps multiple tools:
+the target exists precisely because the combination matters.
+
+**The rule:** always use the make target. Never substitute a subset of the tools
+it invokes, even if the subset looks sufficient. If a target is too slow for a
+quick feedback loop, that's a signal to create a faster target — not to run the
+tools piecemeal and skip steps.
+
+**Encode this in CLAUDE.md as a negative:** "Always use `make lint` — never
+`ruff check` alone" is more reliable than "use make targets" as a general
+principle, because agents follow specific rules better than abstract ones.
+
+---
+
+## Paired [TEST] and [IMPL] issues may disagree on interface shape
+
+Issue templates are authored before the test file exists. When the [IMPL] issue
+specifies an interface (e.g., a class with methods) and the [TEST] issue's test
+file implements a different interface (e.g., module-level functions), the test
+file is the executable spec. The [IMPL] agent follows the tests, not the issue
+description.
+
+This is correct behavior — the test file is the authoritative interface contract —
+but it creates a recurring friction point: the [IMPL] issue becomes misleading for
+anyone reading it later, and PR reviewers may flag the mismatch as a defect.
+
+**The fix:** note the discrepancy explicitly in the [IMPL] PR description. Something
+like "impl issue specified a class interface; implemented as module-level functions
+to match the test file." This documents the decision, confirms it was intentional,
+and gives reviewers the context they need.
+
+**The root cause fix:** [TEST] and [IMPL] issues should be written in sequence, not
+in parallel. Once the test file exists and has been reviewed, the [IMPL] issue should
+reflect its actual interface. If the issues are templated before any tests are written,
+treat the interface specification in both issues as a draft — the test file finalizes it.
+
+---
+
+## Exporting internal helpers for test setup (the url_to_hash pattern)
+
+When a module computes internal state that collaborating code depends on — for
+example, a deduplicator that computes a URL hash before checking the cache — tests
+that need to pre-populate that state face a dilemma: either replicate the hash
+algorithm in the test (fragile, diverges when the algorithm changes) or export
+the helper so tests can call it directly.
+
+**Export the helper.** A small, pure function like `url_to_hash(url: str) -> str`
+is stable, testable in isolation, and gives tests a single source of truth for
+the expected state. Tests that call `cache.mark_seen(url_hash=url_to_hash(url))`
+will automatically stay correct if the hash algorithm changes — they don't need
+to be updated.
+
+This pattern also provides a secondary benefit: the helper's behavior becomes
+independently testable. Tests for `url_to_hash` verify that UTM params are stripped,
+that scheme/host are normalized, and that identical inputs produce identical outputs.
+These are properties of the helper, not the deduplicator — separating them makes
+both easier to reason about.
+
+**The rule for deciding whether to export:** if a test needs to compute the same
+value that the module computes internally in order to set up a valid test scenario,
+export the computation as a named function. The alternative — duplicating the logic
+in the test — is a maintenance hazard that will diverge silently.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
