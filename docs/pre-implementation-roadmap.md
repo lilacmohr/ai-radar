@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-08 (P3.1 + P3.2 + P3.3 + P3.6 + P3.8 complete)
+> **Last updated:** 2026-04-09 (P3 complete — all sources and processing modules done)
 
 ---
 
@@ -90,13 +90,13 @@
 | P3.1 | [#29](https://github.com/lilacmohr/ai-radar/issues/29) ✅ | [#30](https://github.com/lilacmohr/ai-radar/issues/30) ✅ | `Source` ABC (`radar/sources/base.py`) | ✅ | §3.1 |
 | P3.2 | [#31](https://github.com/lilacmohr/ai-radar/issues/31) ✅ | [#32](https://github.com/lilacmohr/ai-radar/issues/32) ✅ | RSS connector (`radar/sources/rss.py`) | ✅ | §3.1 |
 | P3.3 | [#43](https://github.com/lilacmohr/ai-radar/issues/43) ✅ | [#44](https://github.com/lilacmohr/ai-radar/issues/44) ✅ | HN connector (`radar/sources/hn.py`) | ✅ | §3.1 |
-| P3.4 | `[TEST]` | `[IMPL]` | ArXiv connector | ⬜ | §3.1 |
-| P3.5 | `[TEST]` | `[IMPL]` | Gmail connector | ⬜ | §3.1 (OAuth) |
+| P3.4 | [#56](https://github.com/lilacmohr/ai-radar/issues/56) ✅ | [#57](https://github.com/lilacmohr/ai-radar/issues/57) ✅ | ArXiv connector (`radar/sources/arxiv.py`) | ✅ | §3.1 |
+| P3.5 | [#58](https://github.com/lilacmohr/ai-radar/issues/58) ✅ | [#59](https://github.com/lilacmohr/ai-radar/issues/59) ✅ | Gmail connector (`radar/sources/gmail.py`) | ✅ | §3.1 (OAuth) |
 | P3.6 | [#39](https://github.com/lilacmohr/ai-radar/issues/39) ✅ | [#40](https://github.com/lilacmohr/ai-radar/issues/40) ✅ | `deduplicator.py` (Phase 1 + 2) | ✅ | §3.2 steps 2, 5 |
-| P3.7 | `[TEST]` | `[IMPL]` | `excerpt_fetcher.py` | ⬜ | §3.2 step 4 |
+| P3.7 | [#54](https://github.com/lilacmohr/ai-radar/issues/54) ✅ | [#55](https://github.com/lilacmohr/ai-radar/issues/55) ✅ | `excerpt_fetcher.py` | ✅ | §3.2 step 4 |
 | P3.8 | [#41](https://github.com/lilacmohr/ai-radar/issues/41) ✅ | [#42](https://github.com/lilacmohr/ai-radar/issues/42) ✅ | `pre_filter.py` | ✅ | §3.2 step 6 |
 
-*Done when: pipeline runs from source fetch through pre-filter with no LLM calls, producing a `list[ExcerptItem]`.*
+*Done when: pipeline runs from source fetch through pre-filter with no LLM calls, producing a `list[ExcerptItem]`.* ✅ Complete — all P3 modules merged 2026-04-09. 284 tests passing.
 
 ---
 
@@ -147,7 +147,7 @@ Spec v0.3 (✅)
             │
             └── P2: Foundation — models, config, cache (✅)
                     │
-                    └── P3: Sources & Processing (🔄 — P3.1 ✅, P3.2 ✅, P3.3 ✅, P3.6 ✅, P3.8 ✅, P3.4–P3.5, P3.7 ⬜)
+                    └── P3: Sources & Processing (✅ — all complete)
                             │
                             ├── [Prompt Templates required here]
                             │
@@ -173,8 +173,8 @@ using ai-radar as the reference implementation.
 | Claude hooks suite | Enforcement layer separating advisory (CLAUDE.md) from deterministic (hooks) | ✅ |
 | This roadmap | Pre-implementation phase structure for AI-first projects | ✅ |
 | Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ✅ |
-| Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ⬜ |
-| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (5 pairs complete: P2.1–P2.3, P3.1–P3.2, P3.3, P3.6, P3.8) |
+| Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ⬜ (prompts.py ✅; playbook-notes entry still needed) |
+| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (10 pairs complete: P2.1–P2.3, P3.1–P3.8) |
 | ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | ⬜ |
 
 ---
@@ -207,4 +207,7 @@ using ai-radar as the reference implementation.
 8. **✅ P3.8 complete** — `pre_filter.py` (issues #41, #42; PRs #45, #46) merged 2026-04-08
 9. **✅ P3.6 complete** — `deduplicator.py` (issues #39, #40; PRs #48, #49) merged 2026-04-08
 10. **✅ P3.3 complete** — HN connector (issues #43, #44; PRs #51, #52) merged 2026-04-08
-11. **⬜ P3.4, P3.5, P3.7** — ArXiv connector, Gmail connector, excerpt_fetcher; create issues before starting
+11. **✅ P3.7 complete** — `excerpt_fetcher.py` (issues #54, #55; PRs #60, #61) merged 2026-04-09
+12. **✅ P3.4 complete** — ArXiv connector (issues #56, #57; PRs #62, #63) merged 2026-04-09
+13. **✅ P3.5 complete** — Gmail connector (issues #58, #59; PRs #66, #67) merged 2026-04-09; decision issues #64, #65 opened
+14. **⬜ P4** — LLM pipeline; P3 is the prerequisite, now unblocked
