@@ -16,20 +16,103 @@ failures, logged at INFO, and excluded from output.
 Computes url_hash (reusing url_to_hash from deduplicator) and content_hash
 (SHA-256 of excerpt text) for each output item.
 
-Spec reference: SPEC.md §3.2 step 4, §3.7 (paywall threshold), §6.3 (60s timeout).
-"""
+Spec reference: SPEC.md §3.2 step 4, §3.7 (paywall threshold), §6.3 (60s timeout)."""
 
 # 1. Standard library imports
+import hashlib
+import time
+
 # 2. Third-party imports
+import httpx
 import structlog
+import trafilatura
 
 # 3. Internal imports
 from radar.models import ExcerptItem, RawItem
+from radar.processing.deduplicator import url_to_hash
 
 # 4. Module-level logger
 logger = structlog.get_logger(__name__)
 
+# 5. Constants
+_FETCH_TIMEOUT_SECONDS = 60
+_MIN_WORDS = 50
+_MAX_EXCERPT_WORDS = 200
+
 
 def excerpt_fetcher(items: list[RawItem]) -> list[ExcerptItem]:
     """Fetch and extract excerpts for each RawItem, returning ExcerptItems."""
-    raise NotImplementedError
+    start = time.monotonic()
+    result: list[ExcerptItem] = []
+    skipped_paywall = 0
+
+    for item in items:
+        excerpt = _get_excerpt(item)
+        if excerpt is None:
+            skipped_paywall += 1
+            continue
+        result.append(
+            ExcerptItem(
+                url=item.url,
+                title=item.title,
+                source=item.source,
+                published_at=item.published_at,
+                excerpt=excerpt,
+                url_hash=url_to_hash(item.url),
+                content_hash=hashlib.sha256(excerpt.encode()).hexdigest(),
+            )
+        )
+
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+    logger.info(
+        "excerpt_fetch_complete",
+        input=len(items),
+        fetched=len(result),
+        skipped_paywall=skipped_paywall,
+        elapsed_ms=elapsed_ms,
+    )
+    return result
+
+
+def _get_excerpt(item: RawItem) -> str | None:
+    """Return a truncated excerpt string, or None if extraction failed/paywalled."""
+    if item.content_type == "arxiv":
+        text: str = item.raw_content
+    else:
+        fetched = _fetch_and_extract(item.url)
+        if fetched is None:
+            return None
+        text = fetched
+
+    if not text or len(text.split()) < _MIN_WORDS:
+        logger.info("excerpt_skipped_paywall", url=item.url)
+        return None
+
+    return _truncate(text)
+
+
+def _fetch_and_extract(url: str) -> str | None:
+    """Fetch URL and extract clean text with trafilatura. Returns None on failure."""
+    try:
+        response = httpx.get(url, timeout=_FETCH_TIMEOUT_SECONDS)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        logger.warning("excerpt_fetch_http_error", url=url, error=str(exc))
+        return None
+    except httpx.TimeoutException as exc:
+        logger.warning("excerpt_fetch_timeout", url=url, error=str(exc))
+        return None
+    except httpx.ConnectError as exc:
+        logger.warning("excerpt_fetch_connect_error", url=url, error=str(exc))
+        return None
+
+    extracted: str | None = trafilatura.extract(response.text)
+    return extracted
+
+
+def _truncate(text: str) -> str:
+    """Truncate text to at most _MAX_EXCERPT_WORDS words."""
+    words = text.split()
+    if len(words) <= _MAX_EXCERPT_WORDS:
+        return text
+    return " ".join(words[:_MAX_EXCERPT_WORDS])
