@@ -115,6 +115,13 @@ body:
       placeholder: |
         None — PreFilter is pure logic (no I/O, no network, no LLM).
         Use real ExcerptItem dataclass instances as input.
+
+        ⚠️ Mock depth check: if mocking requires configuring a chain of more than
+        3 method calls (e.g. service.a().b().c().execute()), the module under test
+        likely needs an internal helper that can be mocked at a higher level.
+        Before writing tests, check whether such a helper exists. If not, note it
+        here — the [IMPL] issue should add the helper before (or alongside) the
+        main implementation. Tests should mock the helper, not the SDK chain.
     validations:
       required: true
 
