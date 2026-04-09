@@ -327,13 +327,15 @@ def test_sender_matched_by_email_address_not_display_name() -> None:
 def test_max_age_days_included_in_api_query() -> None:
     config = _make_config(max_age_days=3)
     captured_kwargs: list[dict[str, object]] = []
-    mock_service = MagicMock()
-    mock_service.users().messages().list().execute.return_value = {}
+
+    list_result = MagicMock()
+    list_result.execute.return_value = {}
 
     def capture_list(**kwargs: object) -> MagicMock:
         captured_kwargs.append(dict(kwargs))
-        return mock_service.users().messages().list()
+        return list_result
 
+    mock_service = MagicMock()
     mock_service.users().messages().list = capture_list
 
     with (
