@@ -279,6 +279,36 @@ and externally dependent. A test suite that requires live credentials cannot run
 or for a new contributor without setup. `TestLLMClient` and fixture files are the
 isolation boundary — they make the full suite runnable offline, instantly, by anyone.
 
+**External SDK calls deeper than 3 levels must be extracted into a named private helper.**
+
+```python
+# WRONG: logic coupled to SDK call shape — tests must replicate the full chain
+def _fetch_label(service, label, query):
+    response = service.users().messages().list(
+        userId="me", labelIds=[label], q=query
+    ).execute()
+
+# RIGHT: seam at the boundary — tests mock _list_message_ids, not the SDK chain
+def _fetch_label(service, label, query):
+    message_ids = _list_message_ids(service, label, query)
+    ...
+
+def _list_message_ids(service, label: str, query: str) -> list[str]:
+    response = service.users().messages().list(
+        userId="me", labelIds=[label], q=query, maxResults=_MAX_RESULTS
+    ).execute()
+    return [str(m.get("id", "")) for m in response.get("messages", [])]
+```
+
+The helper takes plain Python arguments and returns plain Python data. Tests mock
+the helper with a simple return value. The SDK chain lives in one place, tested once.
+
+**Why:** Mock chains deeper than 3 levels are a signal that logic is coupled to the
+external library's object graph rather than to a stable interface. Deep mocks are
+fragile (any SDK version change breaks them), hard to read, and prone to setup bugs
+(e.g. infinite recursion when a mock accidentally calls itself). Extracting the
+boundary call makes both the production code and its tests simpler.
+
 ### 6.5 Running Tests
 
 ```bash
