@@ -187,6 +187,21 @@ def test_api_status_error_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> 
             LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
 
 
+def test_api_status_error_4xx_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Non-5xx APIStatusError (e.g. 401) must not be retried (SPEC.md §3.7)."""
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    mock_response = MagicMock()
+    mock_response.status_code = 401
+    err = openai.APIStatusError("unauthorized", response=mock_response, body=None)
+    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH) as mock_sleep:
+        mock_create = mock_openai.return_value.chat.completions.create
+        mock_create.side_effect = err
+        with pytest.raises(openai.APIStatusError):
+            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
+        assert mock_create.call_count == 1  # no retry on 4xx
+        mock_sleep.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Retry: timeout  # noqa: ERA001
 # ---------------------------------------------------------------------------
