@@ -106,11 +106,11 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P4.1 | `[TEST]` | `[IMPL]` | `LLMClient` (GitHub Models) | ⬜ | §4.3 |
-| P4.2 | `[TEST]` | `[IMPL]` | `summarizer.py` (Pass 1) | ⬜ | §3.3 |
-| P4.3 | `[TEST]` | `[IMPL]` | `full_fetcher.py` | ⬜ | §3.2 step 7 |
-| P4.4 | `[TEST]` | `[IMPL]` | `truncator.py` | ⬜ | §3.3 |
-| P4.5 | `[TEST]` | `[IMPL]` | `synthesizer.py` (Pass 2) | ⬜ | §3.3 |
+| P4.1 | [#71](https://github.com/lilacmohr/ai-radar/issues/71) | [#72](https://github.com/lilacmohr/ai-radar/issues/72) | `LLMClient` (GitHub Models) | ⬜ | §4.3 |
+| P4.2 | [#73](https://github.com/lilacmohr/ai-radar/issues/73) | [#74](https://github.com/lilacmohr/ai-radar/issues/74) | `summarizer.py` (Pass 1) | ⬜ | §3.3 |
+| P4.3 | [#75](https://github.com/lilacmohr/ai-radar/issues/75) | [#76](https://github.com/lilacmohr/ai-radar/issues/76) | `full_fetcher.py` | ⬜ | §3.2 step 7 |
+| P4.4 | [#77](https://github.com/lilacmohr/ai-radar/issues/77) | [#78](https://github.com/lilacmohr/ai-radar/issues/78) | `truncator.py` | ⬜ | §3.3 |
+| P4.5 | [#79](https://github.com/lilacmohr/ai-radar/issues/79) | [#80](https://github.com/lilacmohr/ai-radar/issues/80) | `synthesizer.py` (Pass 2) | ⬜ | §3.3 |
 
 *Done when: pipeline runs end-to-end from `ExcerptItem` list through `Digest`, using `TestLLMClient` mock for unit tests.*
 
@@ -211,3 +211,4 @@ using ai-radar as the reference implementation.
 12. **✅ P3.4 complete** — ArXiv connector (issues #56, #57; PRs #62, #63) merged 2026-04-09
 13. **✅ P3.5 complete** — Gmail connector (issues #58, #59; PRs #66, #67) merged 2026-04-09; decision issues #64, #65 opened
 14. **⬜ P4** — LLM pipeline; P3 is the prerequisite, now unblocked
+15. **⬜ P4 issue set created** — Issues #71–#80 (5 TEST + 5 IMPL pairs) for P4.1–P4.5 (2026-04-09)
