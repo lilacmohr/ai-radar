@@ -467,4 +467,76 @@ in the test — is a maintenance hazard that will diverge silently.
 
 ---
 
+## Verify mock behavior as part of red-phase confirmation
+
+When test setup involves complex mocks, a broken mock can produce a test that
+*appears* to pass or fail for the wrong reason. The `test_max_age_days_included_in_api_query`
+test in the Gmail connector had a `capture_list` function that called
+`mock_service.users().messages().list()` — which called `capture_list` again,
+causing infinite recursion. The test showed as FAILED (expected in red phase),
+but for the wrong reason: `RecursionError`, not `NotImplementedError`.
+
+If the recursion bug had survived to the green phase, the test would have continued
+failing after a correct implementation — a false red that would have been
+hard to diagnose.
+
+**The rule:** after confirming the red phase, scan any test that involves a
+multi-step mock setup — especially tests that intercept method calls to capture
+arguments. Check that it fails with `AttributeError` or `NotImplementedError`, not
+with an infrastructure error like `RecursionError` or `TypeError` in the mock itself.
+
+**Practical check:** `pytest tests/unit/test_X.py -v` and read the failure reason
+for every test, not just the count. "33 failed" can hide both correct failures and
+broken-mock failures in the same number.
+
+---
+
+## Mock depth is a design signal
+
+When a test requires configuring a mock chain more than 3 levels deep — e.g.,
+`service.users().messages().list().execute.return_value` — the module under test
+likely doesn't have a good internal seam for testing. The production code calls the
+external library directly, so tests must replicate the full call structure.
+
+The design fix: extract the external call into a private helper that accepts the
+minimal parameters and returns the data the module needs. Tests can then mock the
+helper rather than the full chain. This also makes the production code easier to
+read — the call chain appears once, named, rather than repeated across the module.
+
+**The signal in practice:** if you're spending more time configuring a mock than
+writing the assertion it supports, the test is telling you something about the
+module's dependencies. The Gmail connector's `_fetch_label` and `_process_message`
+helpers are a step in this direction — but they still accept the raw `service`
+object. A cleaner seam would be a `_list_messages(service, label, query)` helper
+that returns a plain list, isolating the API call entirely.
+
+**This is a judgment call, not a rule.** External API clients (Google, Stripe, etc.)
+have inherently deep call chains. The goal isn't to eliminate mock depth entirely —
+it's to notice when mock complexity is masking a design opportunity.
+
+---
+
+## Run make lint early and often during test-file authoring
+
+In practice, running `make lint` only as a final gate (step 6 of the agent
+instructions) produces multiple rounds of lint fixes: nested `with` statements,
+non-top-level imports, boolean positional args, magic values, line length — all
+discovered at once after the full test file is written.
+
+The fix is simple: run `make lint` after writing the first 3–5 tests, before
+finishing the file. Lint errors that appear early are cheap to fix; lint errors
+discovered after 30 tests require reviewing the full file for the same pattern.
+
+**This is captured in the [TEST] issue template agent instructions** — step 4
+now asks for an early lint check before writing the remaining tests. The
+CLAUDE.md §6.5 entry covers the pre-PR gate; the template handles the
+task-phase timing.
+
+**The broader principle:** any quality gate that's only run at completion will
+produce batched failures. If a check is fast (lint is), run it incrementally.
+Reserve the full `make check` (lint + typecheck + full test suite) for the
+completion gate where the cost is justified.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
