@@ -105,5 +105,9 @@ def _fetch_and_extract(url: str, user_agent: str) -> str | None:
         logger.warning("full_fetch_connection_error", url=url, error=str(exc))
         return None
 
-    extracted: str | None = trafilatura.extract(response.text)
+    try:
+        extracted: str | None = trafilatura.extract(response.text)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("full_fetch_extract_error", url=url, error=str(exc))
+        return None
     return extracted
