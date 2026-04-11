@@ -59,7 +59,6 @@ class Synthesizer:
     ) -> Digest:
         """Synthesize a Digest from full article text via a single LLM call."""
         today = run_date or datetime.datetime.now(tz=datetime.UTC).date()
-        articles = [_to_scored_item(item) for item in items]
 
         if not items:
             return Digest(
@@ -71,6 +70,8 @@ class Synthesizer:
                 trending_themes="",
                 source_stats={"synthesis_model": self._config.synthesis_model},
             )
+
+        articles = [_to_scored_item(item) for item in items]
 
         t_start = time.monotonic()
 

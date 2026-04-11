@@ -20,7 +20,14 @@ import pytest
 
 # 3. Internal imports
 from radar.config import PipelineConfig, ProfileConfig
-from radar.llm.synthesizer import Synthesizer
+from radar.llm.prompts import PASS_2_USER_TEMPLATE
+from radar.llm.synthesizer import (
+    _SECTION_CONTRARIAN_INSIGHTS,
+    _SECTION_EXECUTIVE_SUMMARY,
+    _SECTION_FOLLOW_UP_QUESTIONS,
+    _SECTION_TRENDING_THEMES,
+    Synthesizer,
+)
 from radar.models import Digest, FullItem, ScoredItem
 from tests.conftest import TestLLMClient
 
@@ -409,3 +416,26 @@ def test_source_stats_contains_synthesis_model() -> None:
     synthesizer, _ = _make_synthesizer()
     result = synthesizer.synthesize([_make_full_item()])
     assert result.source_stats.get("synthesis_model") == PipelineConfig().synthesis_model
+
+
+# ---------------------------------------------------------------------------
+# Regression: prompt headings match parser constants
+# ---------------------------------------------------------------------------
+
+
+def test_pass2_template_contains_executive_summary_heading() -> None:
+    """PASS_2_USER_TEMPLATE must emit the heading the parser looks for."""
+    assert f"## {_SECTION_EXECUTIVE_SUMMARY}" in PASS_2_USER_TEMPLATE
+
+
+def test_pass2_template_contains_contrarian_insights_heading() -> None:
+    """Catches the Non-Obvious vs Contrarian & Non-Obvious mismatch."""
+    assert f"## {_SECTION_CONTRARIAN_INSIGHTS}" in PASS_2_USER_TEMPLATE
+
+
+def test_pass2_template_contains_follow_up_questions_heading() -> None:
+    assert f"## {_SECTION_FOLLOW_UP_QUESTIONS}" in PASS_2_USER_TEMPLATE
+
+
+def test_pass2_template_contains_trending_themes_heading() -> None:
+    assert f"## {_SECTION_TRENDING_THEMES}" in PASS_2_USER_TEMPLATE
