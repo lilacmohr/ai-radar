@@ -1,11 +1,30 @@
 """Shared pytest fixtures for ai-radar tests.
 
-Provides: TestLLMClient mock, temp_cache_dir, temp_output_dir.
+Provides: TestLLMClient mock, temp_cache_dir, temp_output_dir,
+and structlog → stdlib routing so pytest caplog captures log records.
 """
 
 from pathlib import Path
 
 import pytest
+import structlog
+
+
+def pytest_configure(config: pytest.Config) -> None:  # noqa: ARG001
+    """Route structlog through Python stdlib logging so caplog can capture records."""
+    structlog.configure(
+        processors=[
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+            structlog.stdlib.render_to_log_kwargs,
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
 
 
 class TestLLMClient:

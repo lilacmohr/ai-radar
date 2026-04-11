@@ -16,7 +16,7 @@ Verifies the full article fetcher stage:
 
 import logging
 from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import httpx
 import pytest
@@ -207,7 +207,7 @@ def test_fetches_correct_url() -> None:
         patch(_EXTRACT_PATCH, return_value=_long_text(80)),
     ):
         FullFetcher(_make_config()).fetch([item])
-    mock_get.assert_called_once_with("https://example.com/specific")
+    mock_get.assert_called_once_with("https://example.com/specific", timeout=ANY, headers=ANY)
 
 
 def test_trafilatura_receives_response_text() -> None:
