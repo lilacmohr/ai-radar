@@ -101,9 +101,13 @@ body:
       placeholder: |
         New fixtures needed:
         - tests/fixtures/excerpt_items_mixed.py — factory for list[ExcerptItem] with varied content
-        
+
         Existing fixtures usable:
         - conftest.py: sample_config (already exists)
+
+        Model validation constraints to note (prevents silent test setup failures):
+        - ProfileConfig requires interests: list[str] with ≥ 1 item
+        - [list any other required fields / validators for dataclasses used in test helpers]
     validations:
       required: true
 
@@ -141,6 +145,7 @@ body:
         - [ ] Test names are descriptive: `test_pre_filter_passes_on_keyword_in_excerpt`
         - [ ] Any spec ambiguities encountered while writing tests are documented as `[DECISION]` issues — not silently resolved in test code
         - [ ] PR description includes an "Interface decisions made" section listing any interpretive calls, even obvious ones
+        - [ ] **If this module parses structured LLM output** (headings, JSON fields, delimiters): at least one regression test per marker that imports the parser constant and asserts its verbatim presence in the prompt template — canned responses in tests bypass the template entirely, so template/parser mismatches are otherwise invisible
         - [ ] Paired `[IMPL]` issue is linked below before closing this issue
     validations:
       required: true
@@ -162,7 +167,7 @@ body:
         1. Read `CLAUDE.md` and `SPEC.md` at the sections referenced above before writing any code.
         2. Write the test file only. Do not write implementation logic in `radar/`.
         3. Create a **minimal stub** for the module under test (empty classes/functions with correct signatures but no logic). This allows pytest to collect tests as **FAIL** rather than **ERROR**. Stubs are infrastructure, not implementation — they must not contain any real logic.
-        4. Write the first 3–5 tests, then run `make lint` immediately — fix any violations before continuing. Catching lint errors early (boolean positional args, nested `with`, non-top-level imports) is much cheaper than fixing them after all tests are written.
+        4. Write the first 3–5 tests, then run `make lint` immediately — fix any violations before continuing. Catching lint errors early is much cheaper than fixing them after the full file is written. Common traps in test files: magic values in assertions (`PLR2004` — extract to named variables); lines >100 chars (`E501`); unused parameters in stub classes (`ARG002` — add `# noqa: ARG002`); inline strings in `raise` statements (`TRY003`/`EM101` — assign to `msg` first); `datetime.date.today()` (`DTZ011` — use `datetime.datetime.now(tz=datetime.UTC).date()`).
         5. Finish writing all remaining tests.
         6. Run `uv run pytest <test_file> -v` — confirm all behavioral tests show **FAILED**, not **ERROR**. A test that shows ERROR means pytest couldn't collect it; fix the stub until it shows FAILED. For tests involving complex mock setup, also check that each test fails with `AttributeError` or `NotImplementedError` — not with a mock infrastructure error like `RecursionError` or `TypeError`.
         7. If any assertion requires an interpretive call not explicitly in the spec (semantics, required vs optional, error types), open a `[DECISION]` issue **before** encoding the choice in test code.

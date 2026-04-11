@@ -118,7 +118,7 @@ def _to_scored_item(item: FullItem) -> ScoredItem:
         title=item.title,
         source=item.source,
         published_at=item.published_at,
-        excerpt="",
+        excerpt="",  # excerpt is a Phase 1 concept; not carried through FullItem — see #92
         score=item.score,
         summary=item.summary,
     )

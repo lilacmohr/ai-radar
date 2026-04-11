@@ -575,4 +575,41 @@ the feature in the same PR creates noise and makes the PR harder to review.
 
 ---
 
+## Prompt/parser drift: test canned responses bypass the template
+
+When a test supplies a canned LLM response, it bypasses the prompt template entirely.
+This means a mismatch between what the template instructs the model to produce and what
+the parser expects to receive will never be caught by unit tests — the canned response
+can be written to match the parser regardless of what the template says.
+
+In the Synthesizer, the `PASS_2_USER_TEMPLATE` instructed the model to emit
+`## 🔍 Non-Obvious Insights` but the parser looked for
+`## 🔍 Contrarian & Non-Obvious Insights`. Every unit test passed because the canned
+responses were written to match the parser constant. In production, the LLM followed
+the template — and `Digest.contrarian_insights` was always `""`.
+
+**The fix:** add regression tests that import the parser constants and assert their
+verbatim presence in the prompt template. These tests fail immediately if the template
+and parser diverge:
+
+```python
+from radar.llm.prompts import PASS_2_USER_TEMPLATE
+from radar.llm.synthesizer import _SECTION_CONTRARIAN_INSIGHTS
+
+def test_pass2_template_contains_contrarian_insights_heading() -> None:
+    assert f"## {_SECTION_CONTRARIAN_INSIGHTS}" in PASS_2_USER_TEMPLATE
+```
+
+**The rule:** for any module that parses structured LLM output by matching headings or
+markers, add one regression test per marker that cross-validates the prompt template
+against the parser constant. These tests cost one line each and catch an entire class
+of silent production bugs that unit tests with canned responses cannot detect.
+
+**Where to put them:** in the `[TEST]` file for the synthesizer/parser module, grouped
+under a "Regression: prompt headings match parser constants" section. They belong there
+rather than in a separate test file because they test the behavioral contract of the
+parsing module, not just the prompt content in isolation.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
