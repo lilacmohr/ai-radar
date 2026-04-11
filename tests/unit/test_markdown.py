@@ -25,6 +25,7 @@ from radar.output.markdown import (
     _HEADING_EXECUTIVE_SUMMARY,
     _HEADING_FOLLOW_UP_QUESTIONS,
     _HEADING_PIPELINE_METADATA,
+    _HEADING_TITLE_PREFIX,
     _HEADING_TRENDING_THEMES,
     _NO_NOTABLE_CONTENT,
     MarkdownRenderer,
@@ -143,7 +144,7 @@ def test_markdown_title_contains_date_yyyy_mm_dd() -> None:
 def test_markdown_title_prefix_present() -> None:
     renderer = MarkdownRenderer()
     result = renderer.render(_make_digest())
-    assert "# ai-radar Daily Briefing" in result
+    assert _HEADING_TITLE_PREFIX in result
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +171,14 @@ def test_markdown_article_source_in_output() -> None:
     renderer = MarkdownRenderer()
     result = renderer.render(_make_digest(articles=[item]))
     assert "hackernews" in result
+
+
+def test_markdown_article_source_linked_to_url() -> None:
+    """SPEC §3.4 requires [Source](url) markdown link format."""
+    item = _make_scored_item(source="hackernews", url="https://example.com/my-article")
+    renderer = MarkdownRenderer()
+    result = renderer.render(_make_digest(articles=[item]))
+    assert "[hackernews](https://example.com/my-article)" in result
 
 
 def test_markdown_article_summary_in_output() -> None:
@@ -278,6 +287,16 @@ def test_markdown_pipeline_metadata_synthesis_model_present() -> None:
     renderer = MarkdownRenderer()
     result = renderer.render(digest)
     assert "gpt-4o" in result
+
+
+def test_markdown_pipeline_metadata_summarization_model_present() -> None:
+    """SPEC §3.4 requires both Pass 1 and Pass 2 models in the Models line."""
+    digest = _make_digest(
+        source_stats={"synthesis_model": "gpt-4o", "summarization_model": "gpt-4o-mini"}
+    )
+    renderer = MarkdownRenderer()
+    result = renderer.render(digest)
+    assert "gpt-4o-mini" in result
 
 
 # ---------------------------------------------------------------------------
