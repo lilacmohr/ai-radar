@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-09 (P3 complete — all sources and processing modules done)
+> **Last updated:** 2026-04-11 (P4 complete — full LLM pipeline done; P5 next)
 
 ---
 
@@ -106,13 +106,13 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P4.1 | [#71](https://github.com/lilacmohr/ai-radar/issues/71) | [#72](https://github.com/lilacmohr/ai-radar/issues/72) | `LLMClient` (GitHub Models) | ⬜ | §4.3 |
-| P4.2 | [#73](https://github.com/lilacmohr/ai-radar/issues/73) | [#74](https://github.com/lilacmohr/ai-radar/issues/74) | `summarizer.py` (Pass 1) | ⬜ | §3.3 |
-| P4.3 | [#75](https://github.com/lilacmohr/ai-radar/issues/75) | [#76](https://github.com/lilacmohr/ai-radar/issues/76) | `full_fetcher.py` | ⬜ | §3.2 step 7 |
-| P4.4 | [#77](https://github.com/lilacmohr/ai-radar/issues/77) | [#78](https://github.com/lilacmohr/ai-radar/issues/78) | `truncator.py` | ⬜ | §3.3 |
-| P4.5 | [#79](https://github.com/lilacmohr/ai-radar/issues/79) | [#80](https://github.com/lilacmohr/ai-radar/issues/80) | `synthesizer.py` (Pass 2) | ⬜ | §3.3 |
+| P4.1 | [#71](https://github.com/lilacmohr/ai-radar/issues/71) ✅ | [#72](https://github.com/lilacmohr/ai-radar/issues/72) ✅ | `LLMClient` (GitHub Models) | ✅ | §4.3 |
+| P4.2 | [#73](https://github.com/lilacmohr/ai-radar/issues/73) ✅ | [#74](https://github.com/lilacmohr/ai-radar/issues/74) ✅ | `summarizer.py` (Pass 1) | ✅ | §3.3 |
+| P4.3 | [#75](https://github.com/lilacmohr/ai-radar/issues/75) ✅ | [#76](https://github.com/lilacmohr/ai-radar/issues/76) ✅ | `full_fetcher.py` | ✅ | §3.2 step 7 |
+| P4.4 | [#77](https://github.com/lilacmohr/ai-radar/issues/77) ✅ | [#78](https://github.com/lilacmohr/ai-radar/issues/78) ✅ | `truncator.py` | ✅ | §3.3 |
+| P4.5 | [#79](https://github.com/lilacmohr/ai-radar/issues/79) ✅ | [#80](https://github.com/lilacmohr/ai-radar/issues/80) ✅ | `synthesizer.py` (Pass 2) | ✅ | §3.3 |
 
-*Done when: pipeline runs end-to-end from `ExcerptItem` list through `Digest`, using `TestLLMClient` mock for unit tests.*
+*Done when: pipeline runs end-to-end from `ExcerptItem` list through `Digest`, using `TestLLMClient` mock for unit tests.* ✅ Complete — all P4 modules merged 2026-04-11. PRs #81–#90.
 
 ---
 
@@ -151,7 +151,7 @@ Spec v0.3 (✅)
                             │
                             ├── [Prompt Templates required here]
                             │
-                            └── P4: LLM Pipeline (⬜)
+                            └── P4: LLM Pipeline (✅ — all complete)
                                     │
                                     └── P5: Output & Wiring (⬜)
                                                 │
@@ -173,9 +173,9 @@ using ai-radar as the reference implementation.
 | Claude hooks suite | Enforcement layer separating advisory (CLAUDE.md) from deterministic (hooks) | ✅ |
 | This roadmap | Pre-implementation phase structure for AI-first projects | ✅ |
 | Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ✅ |
-| Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ⬜ (prompts.py ✅; playbook-notes entry still needed) |
-| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (10 pairs complete: P2.1–P2.3, P3.1–P3.8) |
-| ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | ⬜ |
+| Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ✅ (prompts.py + regression test pattern + playbook-notes entry added) |
+| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (15 pairs complete: P2.1–P2.3, P3.1–P3.8, P4.1–P4.5) |
+| ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | 🔄 (issues #64, #65 open; P4 decisions pending) |
 
 ---
 
@@ -210,5 +210,6 @@ using ai-radar as the reference implementation.
 11. **✅ P3.7 complete** — `excerpt_fetcher.py` (issues #54, #55; PRs #60, #61) merged 2026-04-09
 12. **✅ P3.4 complete** — ArXiv connector (issues #56, #57; PRs #62, #63) merged 2026-04-09
 13. **✅ P3.5 complete** — Gmail connector (issues #58, #59; PRs #66, #67) merged 2026-04-09; decision issues #64, #65 opened
-14. **⬜ P4** — LLM pipeline; P3 is the prerequisite, now unblocked
-15. **⬜ P4 issue set created** — Issues #71–#80 (5 TEST + 5 IMPL pairs) for P4.1–P4.5 (2026-04-09)
+14. **✅ P4** — LLM pipeline; all five modules complete (PRs #81–#90, 2026-04-11)
+15. **✅ P4 issue set created** — Issues #71–#80 (5 TEST + 5 IMPL pairs) for P4.1–P4.5 (2026-04-09)
+16. **⬜ P5** — Output & wiring; P4 is the prerequisite, now unblocked
