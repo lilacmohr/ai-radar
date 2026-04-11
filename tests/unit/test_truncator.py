@@ -316,6 +316,32 @@ def test_overflow_tied_scores_deterministic() -> None:
     assert result[0].url == "https://example.com/0"
 
 
+def test_short_articles_over_article_limit_are_dropped() -> None:
+    # 3 articles x 50 words = 150 total; word budget = 2 x 100 = 200 (fits by words)
+    # but count = 3 > max_articles_in_digest = 2 — spec cap fires, drop lowest scored
+    article_cap = 2
+    min_kept_score = 7
+    items = [
+        _make_full_item(full_text=_long_text(50), score=s, url=f"https://example.com/{s}")
+        for s in [9, 7, 5]
+    ]
+    truncator = Truncator(_make_config(max_words_full=100, max_articles_in_digest=article_cap))
+    result = truncator.truncate(items)
+    assert len(result) == article_cap
+    assert all(r.score >= min_kept_score for r in result)
+
+
+def test_overflow_output_preserves_input_order() -> None:
+    # Input order: score 9, 3, 7 — drop score 3; output must be [9, 7] in that order
+    items = [
+        _make_full_item(full_text=_long_text(100), score=9, url="https://example.com/a"),
+        _make_full_item(full_text=_long_text(100), score=3, url="https://example.com/b"),
+        _make_full_item(full_text=_long_text(100), score=7, url="https://example.com/c"),
+    ]
+    result = Truncator(_make_config(max_words_full=100, max_articles_in_digest=2)).truncate(items)
+    assert [r.url for r in result] == ["https://example.com/a", "https://example.com/c"]
+
+
 # ---------------------------------------------------------------------------
 # Contract tests
 # ---------------------------------------------------------------------------
