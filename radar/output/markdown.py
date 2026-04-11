@@ -89,16 +89,17 @@ class MarkdownRenderer:
             lines.append(digest.trending_themes)
         lines.append("")
 
+        elapsed_ms = round((time.monotonic() - start) * 1000)
+
         # Pipeline Metadata
         lines.append(_HEADING_PIPELINE_METADATA)
-        lines.extend(_render_metadata(digest, date_str))
+        lines.extend(_render_metadata(digest, elapsed_ms))
         lines.append("")
 
         # Disclosure footer
         lines.append("---")
         lines.append(_DISCLOSURE_FOOTER_TEMPLATE.format(date=date_str))
 
-        elapsed_ms = round((time.monotonic() - start) * 1000)
         logger.info(
             "digest_rendered",
             articles=len(digest.articles),
@@ -119,11 +120,17 @@ def _render_article(article: ScoredItem) -> list[str]:
     ]
 
 
-def _render_metadata(digest: Digest, date_str: str) -> list[str]:
-    """Render the Pipeline Metadata section lines."""
+def _render_metadata(digest: Digest, elapsed_ms: int) -> list[str]:
+    """Render the Pipeline Metadata section lines per SPEC §3.4."""
+    sources_fetched = digest.source_stats.get("sources_fetched", "?")
+    articles_scored = digest.source_stats.get("articles_scored", "?")
+    articles_in_digest = digest.source_stats.get("articles_in_digest", "?")
     summarization_model = digest.source_stats.get("summarization_model", "unknown")
     synthesis_model = digest.source_stats.get("synthesis_model", "unknown")
+    elapsed_s = elapsed_ms / 1000
     return [
-        f"- Date: {date_str}",
+        f"- Sources: {sources_fetched} fetched",
+        f"- Articles: {articles_scored} scored, {articles_in_digest} in digest",
         f"- Models: {summarization_model} (Pass 1), {synthesis_model} (Pass 2)",
+        f"- Run time: {elapsed_s:.2f}s",
     ]
