@@ -8,11 +8,13 @@ Pure rendering logic — no I/O, no network, no LLM calls.
 """
 
 # 1. Standard library imports
+import time
+
 # 2. Third-party imports
 import structlog
 
 # 3. Internal imports
-from radar.models import Digest
+from radar.models import Digest, ScoredItem
 
 # 4. Module-level logger
 logger = structlog.get_logger(__name__)
@@ -36,7 +38,7 @@ _DISCLOSURE_FOOTER_TEMPLATE = (
 class MarkdownRenderer:
     """Renders a Digest into a formatted Markdown briefing document."""
 
-    def render(self, digest: Digest) -> str:  # noqa: ARG002
+    def render(self, digest: Digest) -> str:
         """Render digest to a Markdown string.
 
         Args:
@@ -45,4 +47,83 @@ class MarkdownRenderer:
         Returns:
             Markdown-formatted briefing as a string.
         """
-        return ""
+        start = time.monotonic()
+        date_str = digest.date.strftime("%Y-%m-%d")
+
+        lines: list[str] = []
+
+        # Title
+        lines.append(f"{_HEADING_TITLE_PREFIX} {date_str}")
+        lines.append("")
+
+        # Executive Summary
+        lines.append(_HEADING_EXECUTIVE_SUMMARY)
+        if digest.executive_summary:
+            lines.append(digest.executive_summary)
+        lines.append("")
+
+        # Article Summaries
+        lines.append(_HEADING_ARTICLE_SUMMARIES)
+        if not digest.articles:
+            lines.append(_NO_NOTABLE_CONTENT)
+        else:
+            for article in digest.articles:
+                lines.extend(_render_article(article))
+        lines.append("")
+
+        # Contrarian Insights
+        lines.append(_HEADING_CONTRARIAN_INSIGHTS)
+        if digest.contrarian_insights:
+            lines.append(digest.contrarian_insights)
+        lines.append("")
+
+        # Follow-Up Questions
+        lines.append(_HEADING_FOLLOW_UP_QUESTIONS)
+        if digest.follow_up_questions:
+            lines.append(digest.follow_up_questions)
+        lines.append("")
+
+        # Trending Themes
+        lines.append(_HEADING_TRENDING_THEMES)
+        if digest.trending_themes:
+            lines.append(digest.trending_themes)
+        lines.append("")
+
+        # Pipeline Metadata
+        lines.append(_HEADING_PIPELINE_METADATA)
+        lines.extend(_render_metadata(digest, date_str))
+        lines.append("")
+
+        # Disclosure footer
+        lines.append("---")
+        lines.append(_DISCLOSURE_FOOTER_TEMPLATE.format(date=date_str))
+
+        elapsed_ms = round((time.monotonic() - start) * 1000)
+        logger.info(
+            "digest_rendered",
+            articles=len(digest.articles),
+            date=date_str,
+            elapsed_ms=elapsed_ms,
+        )
+
+        return "\n".join(lines)
+
+
+def _render_article(article: ScoredItem) -> list[str]:
+    """Render a single ScoredItem as markdown lines."""
+    return [
+        f"- **{article.title}** — [{article.source}]({article.url})",
+        f"  {article.summary}",
+        f"  Score: {article.score}/10",
+        "",
+    ]
+
+
+def _render_metadata(digest: Digest, date_str: str) -> list[str]:
+    """Render the Pipeline Metadata section lines."""
+    summarization_model = digest.source_stats.get("summarization_model", "unknown")
+    synthesis_model = digest.source_stats.get("synthesis_model", "unknown")
+    return [
+        f"- Date: {date_str}",
+        f"- Models: {summarization_model} (Pass 1), {synthesis_model} (Pass 2)",
+    ]
