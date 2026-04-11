@@ -33,7 +33,7 @@ _CANNED_RESPONSE = """\
 - Point one
 - Point two
 
-## 🔍 Non-Obvious Insights
+## 🔍 Contrarian & Non-Obvious Insights
 Observation one.
 
 ## ❓ Follow-Up Questions & Rabbit Holes
@@ -203,6 +203,26 @@ def test_single_llm_call_for_all_articles() -> None:
     assert client.call_count == 1
 
 
+def test_profile_role_in_system_prompt() -> None:
+    synthesizer, client = _make_synthesizer()
+    synthesizer.synthesize([_make_full_item()])
+    assert "Engineering Lead" in client.calls[0]["system"]
+
+
+def test_profile_interests_in_system_prompt() -> None:
+    synthesizer, client = _make_synthesizer()
+    synthesizer.synthesize([_make_full_item()])
+    assert "AI" in client.calls[0]["system"]
+
+
+def test_article_full_text_in_llm_prompt() -> None:
+    unique_text = "uniquesentinel " * 60
+    item = _make_full_item(full_text=unique_text.strip(), word_count=60)
+    synthesizer, client = _make_synthesizer()
+    synthesizer.synthesize([item])
+    assert "uniquesentinel" in client.calls[0]["user"]
+
+
 # ---------------------------------------------------------------------------
 # Happy path: empty input
 # ---------------------------------------------------------------------------
@@ -243,7 +263,7 @@ def test_missing_section_returns_empty_string() -> None:
 ## 📡 Executive Summary
 - Only section present.
 
-## 🔍 Non-Obvious Insights
+## 🔍 Contrarian & Non-Obvious Insights
 Observation.
 
 ## 📈 Trending Themes
@@ -265,7 +285,7 @@ Theme first.
 ## ❓ Follow-Up Questions & Rabbit Holes
 Question second.
 
-## 🔍 Non-Obvious Insights
+## 🔍 Contrarian & Non-Obvious Insights
 Insight third.
 
 ## 📡 Executive Summary
@@ -307,7 +327,7 @@ def test_all_sections_empty_no_exception() -> None:
     response = """\
 ## 📡 Executive Summary
 
-## 🔍 Non-Obvious Insights
+## 🔍 Contrarian & Non-Obvious Insights
 
 ## ❓ Follow-Up Questions & Rabbit Holes
 
@@ -377,3 +397,15 @@ def test_works_with_test_llm_client() -> None:
     synthesizer, _ = _make_synthesizer()
     result = synthesizer.synthesize([_make_full_item()])
     assert isinstance(result, Digest)
+
+
+def test_source_stats_is_dict() -> None:
+    synthesizer, _ = _make_synthesizer()
+    result = synthesizer.synthesize([_make_full_item()])
+    assert isinstance(result.source_stats, dict)
+
+
+def test_source_stats_contains_synthesis_model() -> None:
+    synthesizer, _ = _make_synthesizer()
+    result = synthesizer.synthesize([_make_full_item()])
+    assert result.source_stats.get("synthesis_model") == PipelineConfig().synthesis_model
