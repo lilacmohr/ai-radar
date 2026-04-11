@@ -6,7 +6,7 @@ Verifies the full article fetcher stage:
 - word_count: matches len(full_text.split())
 - Paywall/extraction failure: trafilatura returns None → item skipped (INFO log)
 - Short extraction: < 50 words → item skipped (INFO log)
-- HTTP failures: TimeoutException, ConnectError → item skipped (WARNING log)
+- HTTP failures: TimeoutException, ConnectError, HTTPStatusError → item skipped (WARNING log)
 - Partial failure: failing items excluded, successful items returned
 - All fail: returns []
 - Empty input: returns [] without HTTP calls
@@ -200,6 +200,27 @@ def test_multiple_items_all_returned_when_all_succeed() -> None:
     assert len(result) == item_count
 
 
+def test_fetches_correct_url() -> None:
+    item = _make_scored_item(url="https://example.com/specific")
+    with (
+        patch(_FETCH_PATCH, return_value=_mock_http_response()) as mock_get,
+        patch(_EXTRACT_PATCH, return_value=_long_text(80)),
+    ):
+        FullFetcher(_make_config()).fetch([item])
+    mock_get.assert_called_once_with("https://example.com/specific")
+
+
+def test_trafilatura_receives_response_text() -> None:
+    html = "<html><body>unique content</body></html>"
+    item = _make_scored_item()
+    with (
+        patch(_FETCH_PATCH, return_value=_mock_http_response(html)),
+        patch(_EXTRACT_PATCH, return_value=_long_text(80)) as mock_extract,
+    ):
+        FullFetcher(_make_config()).fetch([item])
+    mock_extract.assert_called_once_with(html)
+
+
 # ---------------------------------------------------------------------------
 # Failure modes: paywall / extraction failure
 # ---------------------------------------------------------------------------
@@ -324,6 +345,41 @@ def test_connect_error_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
     ):
         FullFetcher(_make_config()).fetch([item])
     assert any("full_fetch_connection_error" in r.message for r in caplog.records)
+
+
+def test_http_status_error_skips_item() -> None:
+    item = _make_scored_item()
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "404", request=MagicMock(), response=MagicMock()
+    )
+    with patch(_FETCH_PATCH, return_value=mock_resp):
+        result = FullFetcher(_make_config()).fetch([item])
+    assert result == []
+
+
+def test_http_status_error_does_not_raise() -> None:
+    item = _make_scored_item()
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "500", request=MagicMock(), response=MagicMock()
+    )
+    with patch(_FETCH_PATCH, return_value=mock_resp):
+        FullFetcher(_make_config()).fetch([item])  # must not raise
+
+
+def test_http_status_error_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
+    item = _make_scored_item()
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "403", request=MagicMock(), response=MagicMock()
+    )
+    with (
+        patch(_FETCH_PATCH, return_value=mock_resp),
+        caplog.at_level(logging.WARNING),
+    ):
+        FullFetcher(_make_config()).fetch([item])
+    assert any("full_fetch_http_error" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
