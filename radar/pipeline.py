@@ -30,6 +30,7 @@ Spec reference: SPEC.md §3.2 (pipeline steps), §3.7 (failure handling), §4.4 
 """
 
 # 1. Standard library imports
+import datetime
 from pathlib import Path
 
 # 2. Third-party imports
@@ -42,10 +43,10 @@ from radar.llm.summarizer import Summarizer
 from radar.llm.synthesizer import Synthesizer
 from radar.models import ExcerptItem  # noqa: F401
 from radar.output.markdown import MarkdownRenderer
-from radar.processing.deduplicator import dedup_by_content, dedup_by_url  # noqa: F401
-from radar.processing.excerpt_fetcher import excerpt_fetcher  # noqa: F401
+from radar.processing.deduplicator import dedup_by_content, dedup_by_url
+from radar.processing.excerpt_fetcher import excerpt_fetcher
 from radar.processing.full_fetcher import FullFetcher
-from radar.processing.pre_filter import pre_filter  # noqa: F401
+from radar.processing.pre_filter import pre_filter
 from radar.processing.truncator import Truncator
 from radar.sources.base import Source
 
@@ -88,4 +89,85 @@ class Pipeline:
 
     def run(self) -> int:
         """Execute the full pipeline. Returns an exit code per SPEC.md §3.7."""
-        return _EXIT_FATAL
+        today = datetime.datetime.now(tz=datetime.UTC).date()
+        partial_failure = False
+
+        # Stage 1: Source fetch
+        raw_items = []
+        for source in self._sources:
+            try:
+                fetched = source.fetch()
+                raw_items.extend(fetched)
+                logger.info(
+                    "source_fetch_complete",
+                    source=type(source).__name__,
+                    item_count=len(fetched),
+                )
+            except Exception:  # noqa: BLE001
+                logger.warning("source_fetch_failed", source=type(source).__name__)
+                partial_failure = True
+
+        if not raw_items and partial_failure:
+            self._write_failure_digest(today)
+            return _EXIT_FATAL
+
+        # Stage 2: dedup by URL
+        deduped_by_url = dedup_by_url(raw_items, self._cache)
+
+        # Stage 3: excerpt fetch
+        excerpt_items = excerpt_fetcher(deduped_by_url)
+
+        # Stage 4: dedup by content
+        deduped_items = dedup_by_content(excerpt_items, self._cache)
+
+        # Stage 5: pre-filter
+        filtered_items = pre_filter(deduped_items, self._profile.interests)
+
+        # Stage 6: Pass 1 (Summarizer) — raises on LLM error
+        try:
+            scored_items = self._summarizer.summarize(filtered_items)
+        except Exception:
+            logger.exception("summarizer_failed")
+            return _EXIT_FATAL
+
+        # Stage 7: full fetch (skip if nothing scored — Synthesizer handles empty list)
+        if scored_items:
+            full_items = self._full_fetcher.fetch(scored_items)
+            truncated_items = self._truncator.truncate(full_items)
+        else:
+            truncated_items = []
+
+        # Stage 9: Pass 2 (Synthesizer) — raises on LLM error
+        try:
+            source_stats = {
+                "summarization_model": self._config.summarization_model,
+                "synthesis_model": self._config.synthesis_model,
+                "sources_fetched": len(self._sources),
+                "articles_scored": len(scored_items),
+                "articles_in_digest": len(truncated_items),
+            }
+            digest = self._synthesizer.synthesize(truncated_items, run_date=today)
+            digest.source_stats.update(source_stats)
+        except Exception:
+            logger.exception("synthesizer_failed")
+            return _EXIT_FATAL
+
+        # Stage 10: render
+        markdown = self._renderer.render(digest)
+
+        # Stage 11: write digest file
+        output_path = self._output_dir / f"{today.strftime('%Y-%m-%d')}-digest.md"
+        output_path.write_text(markdown)
+        logger.info("digest_written", output_path=str(output_path))
+
+        # Stage 12: mark seen — ONLY after successful write
+        for item in deduped_items:
+            self._cache.mark_seen(item.url_hash, item.content_hash)
+
+        return _EXIT_PARTIAL if partial_failure else _EXIT_SUCCESS
+
+    def _write_failure_digest(self, today: datetime.date) -> None:
+        """Write a failure-digest file when no articles could be fetched."""
+        output_path = self._output_dir / f"{today.strftime('%Y-%m-%d')}-digest.md"
+        output_path.write_text(_FAILURE_DIGEST_CONTENT)
+        logger.error("failure_digest_written", output_path=str(output_path))

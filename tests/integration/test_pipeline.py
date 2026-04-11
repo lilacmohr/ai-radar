@@ -358,8 +358,11 @@ def test_pipeline_zero_articles_pass_prefilter_returns_exit_code_0(
     temp_output_dir: Path,
 ) -> None:
     """Zero articles after pre-filter → minimal digest written, exit code 0."""
-    # Excerpt with no interest keyword → pre_filter drops it
-    no_match_item = _make_excerpt_item(excerpt="Breaking news about sports and weather forecasts.")
+    # Title and excerpt with no interest keyword → pre_filter drops it
+    no_match_item = _make_excerpt_item(
+        title="Breaking news: sports results",
+        excerpt="Breaking news about sports and weather forecasts.",
+    )
     pipeline, _ = _make_pipeline(
         monkeypatch,
         excerpt_items=[no_match_item],
@@ -373,7 +376,10 @@ def test_pipeline_zero_articles_writes_minimal_digest(
     temp_output_dir: Path,
 ) -> None:
     """Zero articles → digest file written with no-notable-content message."""
-    no_match_item = _make_excerpt_item(excerpt="Breaking news about sports and weather forecasts.")
+    no_match_item = _make_excerpt_item(
+        title="Breaking news: sports results",
+        excerpt="Breaking news about sports and weather forecasts.",
+    )
     pipeline, _ = _make_pipeline(
         monkeypatch,
         excerpt_items=[no_match_item],
