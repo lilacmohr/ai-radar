@@ -299,6 +299,37 @@ def test_markdown_pipeline_metadata_summarization_model_present() -> None:
     assert "gpt-4o-mini" in result
 
 
+def test_markdown_pipeline_metadata_sources_fetched_present() -> None:
+    """SPEC §3.4: Sources: {n} fetched line must appear."""
+    digest = _make_digest(source_stats={"sources_fetched": 3})
+    renderer = MarkdownRenderer()
+    result = renderer.render(digest)
+    assert "3 fetched" in result
+
+
+def test_markdown_pipeline_metadata_articles_scored_present() -> None:
+    """SPEC §3.4: Articles: {n} scored line must appear."""
+    digest = _make_digest(source_stats={"articles_scored": 20})
+    renderer = MarkdownRenderer()
+    result = renderer.render(digest)
+    assert "20 scored" in result
+
+
+def test_markdown_pipeline_metadata_articles_in_digest_present() -> None:
+    """SPEC §3.4: Articles: {n} in digest must appear."""
+    digest = _make_digest(source_stats={"articles_in_digest": 5})
+    renderer = MarkdownRenderer()
+    result = renderer.render(digest)
+    assert "5 in digest" in result
+
+
+def test_markdown_pipeline_metadata_run_time_present() -> None:
+    """SPEC §3.4: Run time line must appear in metadata."""
+    renderer = MarkdownRenderer()
+    result = renderer.render(_make_digest())
+    assert "Run time:" in result
+
+
 # ---------------------------------------------------------------------------
 # Happy path: disclosure footer
 # ---------------------------------------------------------------------------
