@@ -23,7 +23,7 @@ import pytest
 
 from radar.config import PipelineConfig
 from radar.models import FullItem, ScoredItem
-from radar.processing.full_fetcher import FullFetcher
+from radar.processing.full_fetcher import _FETCH_TIMEOUT_SECONDS, FullFetcher
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -207,7 +207,11 @@ def test_fetches_correct_url() -> None:
         patch(_EXTRACT_PATCH, return_value=_long_text(80)),
     ):
         FullFetcher(_make_config()).fetch([item])
-    mock_get.assert_called_once_with("https://example.com/specific")
+    mock_get.assert_called_once_with(
+        "https://example.com/specific",
+        timeout=_FETCH_TIMEOUT_SECONDS,
+        headers={"User-Agent": PipelineConfig().user_agent},
+    )
 
 
 def test_trafilatura_receives_response_text() -> None:
@@ -254,6 +258,36 @@ def test_trafilatura_returns_none_logs_info(caplog: pytest.LogCaptureFixture) ->
     ):
         FullFetcher(_make_config()).fetch([item])
     assert any("full_fetch_skipped_paywall" in r.message for r in caplog.records)
+
+
+def test_trafilatura_exception_skips_item() -> None:
+    item = _make_scored_item()
+    with (
+        patch(_FETCH_PATCH, return_value=_mock_http_response()),
+        patch(_EXTRACT_PATCH, side_effect=RuntimeError("parser crash")),
+    ):
+        result = FullFetcher(_make_config()).fetch([item])
+    assert result == []
+
+
+def test_trafilatura_exception_does_not_raise() -> None:
+    item = _make_scored_item()
+    with (
+        patch(_FETCH_PATCH, return_value=_mock_http_response()),
+        patch(_EXTRACT_PATCH, side_effect=RuntimeError("parser crash")),
+    ):
+        FullFetcher(_make_config()).fetch([item])  # must not raise
+
+
+def test_trafilatura_exception_logs_warning(caplog: pytest.LogCaptureFixture) -> None:
+    item = _make_scored_item()
+    with (
+        patch(_FETCH_PATCH, return_value=_mock_http_response()),
+        patch(_EXTRACT_PATCH, side_effect=RuntimeError("parser crash")),
+        caplog.at_level(logging.WARNING),
+    ):
+        FullFetcher(_make_config()).fetch([item])
+    assert any("full_fetch_extract_error" in r.message for r in caplog.records)
 
 
 def test_fewer_than_50_words_skips_item() -> None:
