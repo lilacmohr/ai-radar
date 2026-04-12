@@ -1,4 +1,4 @@
-# ai-radar — Pre-Implementation Roadmap
+# ai-radar — Project Roadmap
 
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
