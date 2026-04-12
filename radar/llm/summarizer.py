@@ -142,7 +142,7 @@ def _try_parse(raw: str) -> list[dict[str, object]] | None:
         if isinstance(result, dict):
             for key in ("data", "articles", "results", "items"):
                 if isinstance(result.get(key), list):
-                    return result[key]  # type: ignore[return-value]
+                    return list(result[key])
     except (json.JSONDecodeError, ValueError):
         pass
     return None
