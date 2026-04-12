@@ -93,7 +93,11 @@ class Summarizer:
             parsed = _try_parse(raw)
 
         if parsed is None:
-            logger.warning("summarizer_batch_skipped", batch_size=len(batch))
+            logger.warning(
+                "summarizer_batch_skipped",
+                batch_size=len(batch),
+                raw_response=raw[:500],
+            )
             return [], 1
 
         scored = _build_scored_items(parsed, url_to_item, self._profile.relevance_threshold)
@@ -125,6 +129,8 @@ def _try_parse(raw: str) -> list[dict[str, object]] | None:
 
     Strips markdown code fences (e.g. ```json ... ```) before parsing —
     some models emit fences even when instructed not to.
+    Unwraps a top-level {"data": [...]} envelope if present — GitHub Models
+    wraps json_object responses in a data key instead of returning a bare array.
     """
     stripped = raw.strip()
     if stripped.startswith("```"):
@@ -133,6 +139,10 @@ def _try_parse(raw: str) -> list[dict[str, object]] | None:
         result = json.loads(stripped)
         if isinstance(result, list):
             return result
+        if isinstance(result, dict):
+            for key in ("data", "articles", "results", "items"):
+                if isinstance(result.get(key), list):
+                    return list(result[key])
     except (json.JSONDecodeError, ValueError):
         pass
     return None
