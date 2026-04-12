@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-12 (P5.1/5.2/5.3 complete — markdown, pipeline, CLI done; P5.4/5.5 next)
+> **Last updated:** 2026-04-12 (P5 complete — all five modules done; pipeline ready for first end-to-end run)
 
 ---
 
@@ -124,11 +124,11 @@
 | P5.1 | [#94](https://github.com/lilacmohr/ai-radar/issues/94) ✅ | [#95](https://github.com/lilacmohr/ai-radar/issues/95) ✅ | `markdown.py` | ✅ | §3.4 |
 | P5.2 | [#96](https://github.com/lilacmohr/ai-radar/issues/96) ✅ | [#97](https://github.com/lilacmohr/ai-radar/issues/97) ✅ | `pipeline.py` | ✅ | §4.2 |
 | P5.3 | [#98](https://github.com/lilacmohr/ai-radar/issues/98) ✅ | [#99](https://github.com/lilacmohr/ai-radar/issues/99) ✅ | `__main__.py` (CLI) | ✅ | §3.6 |
-| P5.4 | [#100](https://github.com/lilacmohr/ai-radar/issues/100) | — | GitHub Actions workflow (full) | ⬜ | §3.6 |
-| P5.5 | [#101](https://github.com/lilacmohr/ai-radar/issues/101) | — | `examples/sample-briefing.md` | ⬜ | §7 |
+| P5.4 | [#100](https://github.com/lilacmohr/ai-radar/issues/100) ✅ | — | GitHub Actions workflow (full) | ✅ | §3.6 |
+| P5.5 | [#101](https://github.com/lilacmohr/ai-radar/issues/101) ✅ | — | `examples/sample-briefing.md` | ✅ | §7 |
 
 *Done when: `python -m radar run` produces a digest file end-to-end. `radar check` validates config and credentials.*
-✅ P5.1/5.2/5.3 complete — PRs #102–#107 merged 2026-04-11/12. P5.4/5.5 remain.
+✅ P5 complete — PRs #102–#107 (P5.1–P5.3) merged 2026-04-11/12. PRs #113–#114 (P5.4–P5.5) merged 2026-04-12.
 
 ---
 
@@ -154,12 +154,12 @@ Spec v0.3 (✅)
                             │
                             └── P4: LLM Pipeline (✅ — all complete)
                                     │
-                                    └── P5: Output & Wiring (🔄)
+                                    └── P5: Output & Wiring (✅)
                                                 │   ├── P5.1 markdown.py ✅
                                                 │   ├── P5.2 pipeline.py ✅
                                                 │   ├── P5.3 __main__.py ✅
-                                                │   ├── P5.4 GitHub Actions ⬜
-                                                │   └── P5.5 sample digest ⬜
+                                                │   ├── P5.4 GitHub Actions ✅
+                                                │   └── P5.5 sample digest ✅
                                                 │
                                                 └── 🚀 First end-to-end run
 ```
@@ -221,5 +221,6 @@ using ai-radar as the reference implementation.
 16. **✅ P5.1 complete** — MarkdownRenderer (issues #94, #95; PRs #102, #103) merged 2026-04-11
 17. **✅ P5.2 complete** — Pipeline orchestrator (issues #96, #97; PRs #104, #105) merged 2026-04-12
 18. **✅ P5.3 complete** — CLI entry point (issues #98, #99; PRs #106, #107) merged 2026-04-12
-19. **⬜ P5.4** — GitHub Actions full workflow (issue #100)
-20. **⬜ P5.5** — Sample briefing (issue #101)
+19. **✅ P5.4 complete** — GitHub Actions daily workflow (issue #100; PR #113) merged 2026-04-12
+20. **✅ P5.5 complete** — Sample briefing (issue #101; PR #114) merged 2026-04-12
+21. **⬜ First end-to-end run** — trigger `workflow_dispatch` on `daily-briefing.yml`; verify digest artifact is produced

@@ -731,4 +731,52 @@ the spec has at least one assertion in the test file."*
 
 ---
 
+## [SCAFFOLD] issues can go stale against the spec
+
+Scaffold issues are often written early in planning, before infrastructure details are
+finalized. By the time they're implemented, the spec may have evolved — secrets may have
+been renamed, file paths changed, or design decisions revised. The scaffold issue reflects
+what was known at authoring time, not necessarily what the spec currently says.
+
+In P5.4, issue #100 specified secrets `GITHUB_TOKEN`, `GMAIL_CREDENTIALS`, and
+`RADAR_CONFIG`. By implementation time, SPEC.md §3.6 had evolved to four different names:
+`GITHUB_MODELS_TOKEN`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`.
+The issue also specified `.cache/seen_urls.json` as the cache path; the spec had moved to
+`cache/` (a directory containing a SQLite database). Following the issue would have produced
+a broken workflow.
+
+**The rule:** before starting any [SCAFFOLD] task, cross-check the issue against the
+current spec section it references. The spec is authoritative; the issue is a pointer to
+it, not a substitute. Where the issue and spec disagree, follow the spec and note the
+discrepancy in the PR description.
+
+This is especially important for [SCAFFOLD] issues that touch credentials, file paths, or
+external service configuration — these details change most often between issue authoring
+and implementation.
+
+---
+
+## Verify factual claims in PR review comments before acting
+
+PR review comments — whether from humans, bots, or automated tools — can make confident
+factual claims that turn out to be wrong. Treating reviewer feedback as authoritative
+without verification can introduce regressions.
+
+In P5.4, the PR review flagged `actions/checkout@v6` as likely non-existent, predicting
+an immediate workflow failure. In fact, `actions/checkout@v6` is the current stable
+release (v6.0.2, shipped 2026-01-09). Changing it to `v4` would have downgraded the
+action unnecessarily.
+
+The right response: before acting on a review comment that makes a specific factual claim
+about an external resource (action versions, API behavior, tool availability), verify the
+claim directly. In this case, checking the releases page for `actions/checkout` took
+30 seconds and confirmed the comment was wrong.
+
+**The rule:** reviewer confidence is not a substitute for verification. Check the source
+before acting, especially for claims about external versioning, API compatibility, or
+tool behavior. When a review item turns out to be incorrect, note it in the PR reply with
+the evidence — this closes the loop for the reviewer and creates a record.
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
