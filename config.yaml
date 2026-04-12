@@ -91,9 +91,9 @@ llm:
 
 pipeline:
   max_words_excerpt: 200         # Pass 1 input truncation (words)
-  max_words_full: 800            # Pass 2 input truncation (words)
+  max_words_full: 400            # Pass 2 input truncation (words); keep under 8000 token GH Models limit
   max_articles_to_summarize: 30  # cap on items sent to Pass 1; tune after first runs
-  max_articles_in_digest: 15     # cap on items sent to Pass 2; tune after first runs
+  max_articles_in_digest: 8      # cap on items sent to Pass 2; tune after first runs
   batch_size: 10                 # articles per LLM call in Pass 1
   summarization_model: "gpt-4o-mini"  # GitHub Models identifier
   synthesis_model: "gpt-4o"          # GitHub Models identifier

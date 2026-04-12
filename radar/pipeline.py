@@ -183,5 +183,6 @@ class Pipeline:
     def _write_failure_digest(self, today: datetime.date) -> None:
         """Write a failure-digest file when no articles could be fetched."""
         output_path = self._output_dir / f"{today.strftime('%Y-%m-%d')}-digest.md"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(_FAILURE_DIGEST_CONTENT)
         logger.error("failure_digest_written", output_path=str(output_path))
