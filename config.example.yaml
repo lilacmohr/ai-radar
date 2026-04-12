@@ -39,9 +39,6 @@ sources:
     newsletter_type: "link_list"  # only supported type in v0.1
     senders: []             # filter to specific senders; leave empty to process all emails in label
 
-  podcasts:
-    enabled: false          # post-MVP, not yet implemented
-
 llm:
   backend: "github_models"  # only supported backend in v0.1
 
