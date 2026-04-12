@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-11 (P4 complete — full LLM pipeline done; P5 next)
+> **Last updated:** 2026-04-12 (P5.1/5.2/5.3 complete — markdown, pipeline, CLI done; P5.4/5.5 next)
 
 ---
 
@@ -121,13 +121,14 @@
 
 | # | Test Issue | Impl Issue | Module | Status | Spec Ref |
 |---|---|---|---|---|---|
-| P5.1 | `[TEST]` | `[IMPL]` | `markdown.py` | ⬜ | §3.4 |
-| P5.2 | `[TEST]` | `[IMPL]` | `pipeline.py` | ⬜ | §4.2 |
-| P5.3 | `[TEST]` | `[IMPL]` | `__main__.py` (CLI) | ⬜ | §3.6 |
-| P5.4 | `[SCAFFOLD]` | — | GitHub Actions workflow (full) | ⬜ | §3.6 |
-| P5.5 | `[SCAFFOLD]` | — | `examples/sample-briefing.md` | ⬜ | §7 |
+| P5.1 | [#94](https://github.com/lilacmohr/ai-radar/issues/94) ✅ | [#95](https://github.com/lilacmohr/ai-radar/issues/95) ✅ | `markdown.py` | ✅ | §3.4 |
+| P5.2 | [#96](https://github.com/lilacmohr/ai-radar/issues/96) ✅ | [#97](https://github.com/lilacmohr/ai-radar/issues/97) ✅ | `pipeline.py` | ✅ | §4.2 |
+| P5.3 | [#98](https://github.com/lilacmohr/ai-radar/issues/98) ✅ | [#99](https://github.com/lilacmohr/ai-radar/issues/99) ✅ | `__main__.py` (CLI) | ✅ | §3.6 |
+| P5.4 | [#100](https://github.com/lilacmohr/ai-radar/issues/100) | — | GitHub Actions workflow (full) | ⬜ | §3.6 |
+| P5.5 | [#101](https://github.com/lilacmohr/ai-radar/issues/101) | — | `examples/sample-briefing.md` | ⬜ | §7 |
 
 *Done when: `python -m radar run` produces a digest file end-to-end. `radar check` validates config and credentials.*
+✅ P5.1/5.2/5.3 complete — PRs #102–#107 merged 2026-04-11/12. P5.4/5.5 remain.
 
 ---
 
@@ -153,7 +154,12 @@ Spec v0.3 (✅)
                             │
                             └── P4: LLM Pipeline (✅ — all complete)
                                     │
-                                    └── P5: Output & Wiring (⬜)
+                                    └── P5: Output & Wiring (🔄)
+                                                │   ├── P5.1 markdown.py ✅
+                                                │   ├── P5.2 pipeline.py ✅
+                                                │   ├── P5.3 __main__.py ✅
+                                                │   ├── P5.4 GitHub Actions ⬜
+                                                │   └── P5.5 sample digest ⬜
                                                 │
                                                 └── 🚀 First end-to-end run
 ```
@@ -174,7 +180,7 @@ using ai-radar as the reference implementation.
 | This roadmap | Pre-implementation phase structure for AI-first projects | ✅ |
 | Phase 0 ticket set | Example `[SCAFFOLD]` issues, fully filled out | ✅ |
 | Prompt template pattern | How to treat prompts as code (versionable, reviewable) | ✅ (prompts.py + regression test pattern + playbook-notes entry added) |
-| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (15 pairs complete: P2.1–P2.3, P3.1–P3.8, P4.1–P4.5) |
+| TDD workflow with AI agents | `[TEST]` → `[IMPL]` pairing in practice, with hook enforcement | 🔄 (18 pairs complete: P2.1–P2.3, P3.1–P3.8, P4.1–P4.5, P5.1–P5.3) |
 | ADR / decision log | How `[DECISION]` issues capture architectural decisions as permanent record | 🔄 (issues #64, #65 open; P4 decisions pending) |
 
 ---
@@ -212,4 +218,8 @@ using ai-radar as the reference implementation.
 13. **✅ P3.5 complete** — Gmail connector (issues #58, #59; PRs #66, #67) merged 2026-04-09; decision issues #64, #65 opened
 14. **✅ P4** — LLM pipeline; all five modules complete (PRs #81–#90, 2026-04-11)
 15. **✅ P4 issue set created** — Issues #71–#80 (5 TEST + 5 IMPL pairs) for P4.1–P4.5 (2026-04-09)
-16. **⬜ P5** — Output & wiring; P4 is the prerequisite, now unblocked
+16. **✅ P5.1 complete** — MarkdownRenderer (issues #94, #95; PRs #102, #103) merged 2026-04-11
+17. **✅ P5.2 complete** — Pipeline orchestrator (issues #96, #97; PRs #104, #105) merged 2026-04-12
+18. **✅ P5.3 complete** — CLI entry point (issues #98, #99; PRs #106, #107) merged 2026-04-12
+19. **⬜ P5.4** — GitHub Actions full workflow (issue #100)
+20. **⬜ P5.5** — Sample briefing (issue #101)

@@ -612,4 +612,123 @@ parsing module, not just the prompt content in isolation.
 
 ---
 
+## `click.Path(exists=True)` breaks `--help` when the default path doesn't exist
+
+Click validates `Path(exists=True)` parameters eagerly — before `--help` short-circuits.
+If a CLI option has a default path that doesn't exist in the test environment, `--help`
+will exit with code 2 ("Error: Invalid value for '--config': Path ... does not exist.")
+instead of code 0. Tests asserting `exit_code == 0` for `--help` will fail.
+
+The failure is invisible in manual testing if the config path always exists locally. It
+surfaces in CI (fresh checkout, no config file) or in unit tests using `CliRunner()`.
+
+**The fix:** remove `exists=True` from `click.Path()` for config file options. Validate
+the path manually at the start of the command body, before any other logic:
+
+```python
+@cli.command()
+@click.option("--config", type=click.Path(dir_okay=False, path_type=Path))
+def run(config: Path) -> None:
+    if not config.exists():
+        raise click.ClickException(f"Config file not found: {config}")
+    ...
+```
+
+**The rule:** never use `click.Path(exists=True)` for config file options that have
+defaults or that are referenced in `--help` tests. Always validate manually at the
+start of the command body.
+
+---
+
+## Grep all importers before moving a shared function
+
+When a shared utility function moves between modules, the author naturally updates their
+own import sites. But consumers in other modules — especially in test files — are easy
+to miss. The result is `attr-defined` or `ImportError` errors that only surface when mypy
+or the test suite runs against the full codebase.
+
+In P5.3, `url_to_hash` was moved from `deduplicator.py` to `cache.py`. The imports were
+updated in the module doing the moving, but `excerpt_fetcher.py` and `test_deduplicator.py`
+still imported from `deduplicator`. Mypy caught both after the fix was committed, not before.
+
+**The rule:** before committing any change that moves or renames a publicly-imported name,
+run:
+
+```bash
+grep -r "from radar.processing.deduplicator import url_to_hash" .
+grep -r "import url_to_hash" .
+```
+
+Replace with the specific name being moved. Fix all hits before committing. This is a
+30-second step that prevents a mypy failure round-trip.
+
+**Encode this in CLAUDE.md** as: "When renaming or moving a shared function, grep the
+full codebase for all import sites before committing. Missing an importer causes a mypy
+failure that can't be detected locally until `make typecheck` runs."
+
+---
+
+## Factory function pattern for CLI testability when constructors fail without credentials
+
+When a CLI command constructs an object whose `__init__` raises without credentials
+(e.g., `LLMClient` raises `ValueError` if `GITHUB_MODELS_TOKEN` is unset), unit tests
+cannot use `patch()` on the class after construction — Python evaluates constructor
+arguments before `patch` can intercept them.
+
+The pattern that works: define a **module-level factory function** in `__main__.py`
+with the same name as the class it produces. Tests patch the factory function at the
+module level, intercepting the call before any credentials are needed:
+
+```python
+# In __main__.py
+def Pipeline(cfg: Config, config_path: Path) -> PipelineClass:  # noqa: N802
+    """Factory: creates Pipeline (named to match class for test patching convenience)."""
+    return PipelineClass(cfg, config_path)
+
+# In tests
+with patch("radar.__main__.Pipeline", return_value=mock_pipeline):
+    runner.invoke(cli, ["run"])
+```
+
+The `# noqa: N802` suppresses the "function name should be lowercase" lint rule. The
+naming is intentional: it mirrors the class name so the patch target is intuitive.
+
+**Trade-off:** this is non-obvious to a reader encountering it for the first time. The
+docstring must explain why the factory has a capitalized name — otherwise it looks like
+a mistake. See decision issue #108 for the alternative designs that were considered.
+
+**When to apply this pattern:** any time a CLI layer constructs an object whose init
+performs network calls, credential validation, or external I/O that would fail in a test
+environment. The factory function is the seam between "object construction" and "object
+behavior" — mock the former, test the latter.
+
+---
+
+## Test coverage drives implementation completeness — spec sections without assertions get missed
+
+In P5.1, the `MarkdownRenderer` was implemented correctly for everything the test file
+covered. But the test file omitted the Pipeline Metadata block from SPEC.md §3.4 (which
+requires a "Sources", "Articles", and "Run time" line). The implementation had a wrong
+"Date:" line instead. All tests passed. The gap wasn't caught until post-implementation
+PR review.
+
+The root cause: the agent writing tests read the spec but didn't translate every section
+into an assertion. The Pipeline Metadata section is a distinct block in the spec, but
+the test file had no test for it at all. With no test, the implementation had no signal
+that this section was wrong — or even expected.
+
+**The rule:** during `[TEST]` work, read the spec section by section and write at least
+one assertion per distinct behavioral unit. A spec section that has no corresponding test
+assertion will not be caught during implementation, regardless of how carefully the
+implementation is written.
+
+**Practical check:** after finishing the test file, re-read the spec section and ask:
+*"If I deleted every line of spec text that corresponds to an existing test assertion,
+what's left?"* Anything left is an uncovered spec requirement.
+
+**Add to the `[TEST]` issue template checklist:** *"Every distinct behavioral unit in
+the spec has at least one assertion in the test file."*
+
+---
+
 *Part of the AI Engineering Playbook. Reference implementation: ai-radar (Python + Claude Code).*
