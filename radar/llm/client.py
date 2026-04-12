@@ -28,15 +28,15 @@ _HTTP_SERVER_ERROR_MIN = 500
 class LLMClient:
     """GitHub Models LLM client with exponential-backoff retry.
 
-    Reads GITHUB_MODELS_TOKEN from the environment on construction.
+    Reads GH_MODELS_TOKEN from the environment on construction.
     Raises ValueError immediately if the token is not set.
     """
 
     def __init__(self) -> None:
-        token = os.environ.get("GITHUB_MODELS_TOKEN")
+        token = os.environ.get("GH_MODELS_TOKEN")
         if not token:
             msg = (
-                "GITHUB_MODELS_TOKEN environment variable is not set. "
+                "GH_MODELS_TOKEN environment variable is not set. "
                 "Set it to a GitHub personal access token with Models: Read-only scope."
             )
             raise ValueError(msg)

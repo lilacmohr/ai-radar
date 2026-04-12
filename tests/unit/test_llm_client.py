@@ -2,7 +2,7 @@
 
 Verifies:
 - complete() returns the LLM response content as a plain str
-- Missing GITHUB_MODELS_TOKEN raises ValueError on construction
+- Missing GH_MODELS_TOKEN raises ValueError on construction
 - Retry logic: RateLimitError (429), APIStatusError (5xx), APITimeoutError
   → exponential backoff (1s, 2s, 4s), max 3 retries
 - Exhaustion: all 3 retries fail → exception propagates (never returns None or "")
@@ -58,7 +58,7 @@ def _timeout_error() -> openai.APITimeoutError:
 
 
 def test_complete_returns_str(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.return_value = _make_openai_response()
         result = LLMClient().complete(system="sys", user="usr", model="gpt-4o-mini")
@@ -66,7 +66,7 @@ def test_complete_returns_str(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_complete_returns_response_content(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.return_value = _make_openai_response(
             "expected content"
@@ -76,7 +76,7 @@ def test_complete_returns_response_content(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_complete_passes_system_and_user_as_messages(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.return_value = _make_openai_response()
@@ -87,7 +87,7 @@ def test_complete_passes_system_and_user_as_messages(monkeypatch: pytest.MonkeyP
 
 
 def test_complete_passes_model_to_api(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.return_value = _make_openai_response()
@@ -98,7 +98,7 @@ def test_complete_passes_model_to_api(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_multiple_sequential_calls_return_correct_responses(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.side_effect = [
             _make_openai_response("first"),
@@ -117,8 +117,8 @@ def test_multiple_sequential_calls_return_correct_responses(
 
 
 def test_missing_token_raises_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("GITHUB_MODELS_TOKEN", raising=False)
-    with pytest.raises(ValueError, match="GITHUB_MODELS_TOKEN"):
+    monkeypatch.delenv("GH_MODELS_TOKEN", raising=False)
+    with pytest.raises(ValueError, match="GH_MODELS_TOKEN"):
         LLMClient()
 
 
@@ -128,7 +128,7 @@ def test_missing_token_raises_value_error(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_rate_limit_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.side_effect = [_rate_limit_error(), _make_openai_response("ok")]
@@ -138,7 +138,7 @@ def test_rate_limit_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) 
 
 def test_rate_limit_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -> None:
     """1 initial attempt + 3 retries = 4 total calls before giving up."""
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.side_effect = _rate_limit_error()
@@ -148,7 +148,7 @@ def test_rate_limit_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch
 
 
 def test_rate_limit_exhaustion_raises_not_returns(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.side_effect = _rate_limit_error()
         with pytest.raises(openai.RateLimitError):
@@ -161,7 +161,7 @@ def test_rate_limit_exhaustion_raises_not_returns(monkeypatch: pytest.MonkeyPatc
 
 
 def test_api_status_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.side_effect = [_api_status_error(), _make_openai_response("ok")]
@@ -170,7 +170,7 @@ def test_api_status_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_api_status_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.side_effect = _api_status_error()
@@ -180,7 +180,7 @@ def test_api_status_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch
 
 
 def test_api_status_error_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.side_effect = _api_status_error()
         with pytest.raises(openai.APIStatusError):
@@ -189,7 +189,7 @@ def test_api_status_error_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_api_status_error_4xx_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> None:
     """Non-5xx APIStatusError (e.g. 401) must not be retried (SPEC.md §3.7)."""
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     mock_response = MagicMock()
     mock_response.status_code = 401
     err = openai.APIStatusError("unauthorized", response=mock_response, body=None)
@@ -208,7 +208,7 @@ def test_api_status_error_4xx_does_not_retry(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_timeout_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.side_effect = [_timeout_error(), _make_openai_response("ok")]
@@ -217,7 +217,7 @@ def test_timeout_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_timeout_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.side_effect = _timeout_error()
@@ -227,7 +227,7 @@ def test_timeout_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_timeout_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.side_effect = _timeout_error()
         with pytest.raises(openai.APITimeoutError):
@@ -241,7 +241,7 @@ def test_timeout_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_retry_sleeps_with_1_2_4_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
     """Backoff delays must be 1s, 2s, 4s on successive retries."""
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH) as mock_sleep:
         mock_openai.return_value.chat.completions.create.side_effect = [
             _rate_limit_error(),
@@ -255,7 +255,7 @@ def test_retry_sleeps_with_1_2_4_backoff(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_no_sleep_on_success_without_retry(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH) as mock_sleep:
         mock_openai.return_value.chat.completions.create.return_value = _make_openai_response()
         LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
@@ -275,7 +275,7 @@ def test_complete_signature_matches_test_llm_client() -> None:
 
 
 def test_return_type_is_str_not_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_openai.return_value.chat.completions.create.return_value = _make_openai_response()
         result = LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
@@ -290,7 +290,7 @@ def test_return_type_is_str_not_none(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_response_format_forwarded_to_api_when_provided(monkeypatch: pytest.MonkeyPatch) -> None:
     """response_format kwarg must be forwarded to the underlying API call."""
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     fmt = {"type": "json_object"}
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
@@ -301,7 +301,7 @@ def test_response_format_forwarded_to_api_when_provided(monkeypatch: pytest.Monk
 
 def test_response_format_omitted_from_api_when_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """When response_format=None, the key must not appear in the API call kwargs."""
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "fake-token")
+    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
     with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
         mock_create = mock_openai.return_value.chat.completions.create
         mock_create.return_value = _make_openai_response()
