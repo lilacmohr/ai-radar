@@ -24,10 +24,31 @@ from radar.models import ExcerptItem
 
 logger = structlog.get_logger(__name__)
 
-_STOP_WORDS = frozenset({
-    "and", "or", "the", "for", "of", "in", "with", "from", "to", "a", "an",
-    "at", "is", "are", "as", "by", "on", "its", "that", "this", "their",
-})
+_STOP_WORDS = frozenset(
+    {
+        "and",
+        "or",
+        "the",
+        "for",
+        "of",
+        "in",
+        "with",
+        "from",
+        "to",
+        "a",
+        "an",
+        "at",
+        "is",
+        "are",
+        "as",
+        "by",
+        "on",
+        "its",
+        "that",
+        "this",
+        "their",
+    }
+)
 
 
 def _expand_interests(interests: list[str]) -> list[str]:
