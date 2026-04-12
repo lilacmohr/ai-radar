@@ -16,6 +16,7 @@ Spec reference: SPEC.md §4.4 (caching & deduplication).
 """
 
 # Standard library imports
+import hashlib
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -111,6 +112,32 @@ class Cache:
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(_INSERT_SQL, (url_hash, content_hash, seen_at))
             conn.commit()
+
+    def clear_all(self) -> None:
+        """Delete all entries from the cache."""
+        with sqlite3.connect(self._db_path) as conn:
+            conn.execute("DELETE FROM seen_items")
+            conn.commit()
+        logger.info("cache_cleared")
+
+    def stats(self) -> dict[str, object]:
+        """Return cache statistics: entry_count, oldest, newest seen_at strings."""
+        with sqlite3.connect(self._db_path) as conn:
+            row = conn.execute(
+                "SELECT COUNT(*), MIN(seen_at), MAX(seen_at) FROM seen_items"
+            ).fetchone()
+        count, oldest, newest = row or (0, None, None)
+        return {"entry_count": count, "oldest": oldest, "newest": newest}
+
+    def remove_url(self, url: str) -> bool:
+        """Remove all cache entries for the given URL. Returns True if any were removed."""
+        url_hash = hashlib.sha256(url.encode()).hexdigest()
+        with sqlite3.connect(self._db_path) as conn:
+            cursor = conn.execute("DELETE FROM seen_items WHERE url_hash = ?", (url_hash,))
+            conn.commit()
+        removed: bool = cursor.rowcount > 0
+        logger.info("cache_remove_url", url=url, removed=removed)
+        return removed
 
     def purge_expired(self, ttl_days: int) -> int:
         """Remove entries older than ttl_days. Returns the number of rows deleted.

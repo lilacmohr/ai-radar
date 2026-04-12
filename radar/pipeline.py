@@ -87,9 +87,9 @@ class Pipeline:
         self._renderer = renderer
         self._output_dir = output_dir
 
-    def run(self) -> int:
+    def run(self, run_date: datetime.date | None = None) -> int:
         """Execute the full pipeline. Returns an exit code per SPEC.md §3.7."""
-        today = datetime.datetime.now(tz=datetime.UTC).date()
+        today = run_date if run_date is not None else datetime.datetime.now(tz=datetime.UTC).date()
         partial_failure = False
 
         # Stage 1: Source fetch
