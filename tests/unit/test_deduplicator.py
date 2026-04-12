@@ -13,12 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from radar.cache import Cache
+from radar.cache import Cache, url_to_hash
 from radar.models import ExcerptItem, RawItem
 from radar.processing.deduplicator import (
     dedup_by_content,
     dedup_by_url,
-    url_to_hash,
 )
 
 # ---------------------------------------------------------------------------

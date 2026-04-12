@@ -28,8 +28,8 @@ import structlog
 import trafilatura
 
 # 3. Internal imports
+from radar.cache import url_to_hash
 from radar.models import ExcerptItem, RawItem
-from radar.processing.deduplicator import url_to_hash
 
 # 4. Module-level logger
 logger = structlog.get_logger(__name__)

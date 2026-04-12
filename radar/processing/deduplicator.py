@@ -18,27 +18,19 @@ Spec reference: SPEC.md §3.2 steps 2 and 5, §4.4.
 """
 
 # 1. Standard library imports
-import hashlib
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+# (none — URL hashing delegated to radar.cache)
 
 # 2. Third-party imports
 import structlog
 
 # 3. Internal imports
-from radar.cache import Cache
+from radar.cache import Cache, url_to_hash
 from radar.models import ExcerptItem, RawItem
 
 # 4. Module-level logger
 logger = structlog.get_logger(__name__)
 
-# 5. Constants
-_TRACKING_PARAMS = frozenset({"fbclid", "gclid", "ref", "source"})
-
-
-def url_to_hash(url: str) -> str:
-    """Return a hex hash of the normalized URL (tracking params stripped)."""
-    normalized = _normalize_url(url)
-    return hashlib.sha256(normalized.encode()).hexdigest()
+# url_to_hash is imported from radar.cache — single source of truth for URL normalization.
 
 
 def dedup_by_url(items: list[RawItem], cache: Cache) -> list[RawItem]:
@@ -98,19 +90,3 @@ def dedup_by_content(items: list[ExcerptItem], cache: Cache) -> list[ExcerptItem
         duplicates_removed=len(items) - len(result),
     )
     return result
-
-
-def _normalize_url(url: str) -> str:
-    """Strip tracking query parameters and normalize scheme/host to lowercase."""
-    parsed = urlparse(url)
-    params = parse_qs(parsed.query, keep_blank_values=True)
-    filtered = {
-        k: v for k, v in params.items() if not k.startswith("utm_") and k not in _TRACKING_PARAMS
-    }
-    clean_query = urlencode(filtered, doseq=True)
-    normalized = parsed._replace(
-        scheme=parsed.scheme.lower(),
-        netloc=parsed.netloc.lower(),
-        query=clean_query,
-    )
-    return urlunparse(normalized)

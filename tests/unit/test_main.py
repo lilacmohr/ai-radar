@@ -7,17 +7,17 @@ Verifies the CLI layer (issue #98):
 - Happy path: `check` exits 0 on valid config
 - Happy path: `auth gmail` calls the Gmail auth helper
 - Happy path: `cache clear/stats/remove` call the appropriate Cache methods
-- Failure modes: missing config, invalid date format, check failure, propagated LLM exit code 2, unknown subcommand
+- Failure modes: missing config, invalid date format, check failure, propagated LLM exit code 2,
+  unknown subcommand
 - Help: --help on each subcommand exits 0
 """
 
 # 1. Standard library imports
 import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 # 2. Third-party imports
-import pytest
 from click.testing import CliRunner
 
 # 3. Internal imports
@@ -254,7 +254,11 @@ def test_cli_cache_stats_exits_0(tmp_path: Path) -> None:
     """radar cache stats exits 0 and prints output."""
     cfg = _config_file(tmp_path)
     mock_cache = MagicMock()
-    mock_cache.stats.return_value = {"entry_count": 42, "oldest": "2026-01-01", "newest": "2026-04-11"}
+    mock_cache.stats.return_value = {
+        "entry_count": 42,
+        "oldest": "2026-01-01",
+        "newest": "2026-04-11",
+    }
     with patch("radar.__main__.Cache", return_value=mock_cache):
         runner = CliRunner()
         result = runner.invoke(cli, ["--config", str(cfg), "cache", "stats"])
@@ -265,7 +269,11 @@ def test_cli_cache_stats_prints_entry_count(tmp_path: Path) -> None:
     """radar cache stats prints entry count to stdout."""
     cfg = _config_file(tmp_path)
     mock_cache = MagicMock()
-    mock_cache.stats.return_value = {"entry_count": 42, "oldest": "2026-01-01", "newest": "2026-04-11"}
+    mock_cache.stats.return_value = {
+        "entry_count": 42,
+        "oldest": "2026-01-01",
+        "newest": "2026-04-11",
+    }
     with patch("radar.__main__.Cache", return_value=mock_cache):
         runner = CliRunner()
         result = runner.invoke(cli, ["--config", str(cfg), "cache", "stats"])
@@ -337,7 +345,7 @@ def test_cli_check_exits_nonzero_on_failure(tmp_path: Path) -> None:
 
 
 def test_cli_run_passes_config_to_pipeline(tmp_path: Path) -> None:
-    """radar run constructs Pipeline with the loaded config object."""
+    """radar run constructs Pipeline with the loaded Config and config_path."""
     cfg = _config_file(tmp_path)
     mock_pipeline = MagicMock()
     mock_pipeline.run.return_value = _EXIT_SUCCESS
@@ -345,7 +353,8 @@ def test_cli_run_passes_config_to_pipeline(tmp_path: Path) -> None:
         mock_cls.return_value = mock_pipeline
         runner = CliRunner()
         runner.invoke(cli, ["--config", str(cfg), "run"])
-        mock_cls.assert_called_once()
+        # Verify the correct config_path was threaded into the factory (cfg=ANY, config_path=cfg)
+        mock_cls.assert_called_once_with(ANY, cfg)
 
 
 def test_cli_run_missing_config_exits_nonzero(tmp_path: Path) -> None:
