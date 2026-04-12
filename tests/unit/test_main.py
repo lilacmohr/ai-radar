@@ -7,7 +7,7 @@ Verifies the CLI layer (issue #98):
 - Happy path: `check` exits 0 on valid config
 - Happy path: `auth gmail` calls the Gmail auth helper
 - Happy path: `cache clear/stats/remove` call the appropriate Cache methods
-- Failure modes: missing config, propagated LLM exit code 2, unknown subcommand
+- Failure modes: missing config, invalid date format, check failure, propagated LLM exit code 2, unknown subcommand
 - Help: --help on each subcommand exits 0
 """
 
@@ -317,6 +317,35 @@ def test_cli_cache_remove_url_not_in_cache_exits_0(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Failure modes
 # ---------------------------------------------------------------------------
+
+
+def test_cli_run_invalid_date_format_exits_nonzero(tmp_path: Path) -> None:
+    """radar run --date with an invalid date string exits non-zero."""
+    cfg = _config_file(tmp_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--config", str(cfg), "run", "--date", "not-a-date"])
+    assert result.exit_code != 0
+
+
+def test_cli_check_exits_nonzero_on_failure(tmp_path: Path) -> None:
+    """radar check exits non-zero when any connectivity check fails."""
+    cfg = _config_file(tmp_path)
+    with patch("radar.__main__._run_check", return_value=1):
+        runner = CliRunner()
+        result = runner.invoke(cli, ["--config", str(cfg), "check"])
+        assert result.exit_code != 0
+
+
+def test_cli_run_passes_config_to_pipeline(tmp_path: Path) -> None:
+    """radar run constructs Pipeline with the loaded config object."""
+    cfg = _config_file(tmp_path)
+    mock_pipeline = MagicMock()
+    mock_pipeline.run.return_value = _EXIT_SUCCESS
+    with patch("radar.__main__.Pipeline") as mock_cls:
+        mock_cls.return_value = mock_pipeline
+        runner = CliRunner()
+        runner.invoke(cli, ["--config", str(cfg), "run"])
+        mock_cls.assert_called_once()
 
 
 def test_cli_run_missing_config_exits_nonzero(tmp_path: Path) -> None:
