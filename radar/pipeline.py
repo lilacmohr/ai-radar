@@ -121,8 +121,18 @@ class Pipeline:
 
         # Stage 5: cap articles sent to Pass 1 (sort by recency, take top N)
         cap = self._config.max_articles_to_summarize
-        capped_items = sorted(deduped_items, key=lambda x: x.published_at or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), reverse=True)[:cap]
-        logger.info("pre_summarizer_cap", input=len(deduped_items), capped=len(capped_items), cap=cap)
+        _epoch = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+        capped_items = sorted(
+            deduped_items,
+            key=lambda x: x.published_at or _epoch,
+            reverse=True,
+        )[:cap]
+        logger.info(
+            "pre_summarizer_cap",
+            input=len(deduped_items),
+            capped=len(capped_items),
+            cap=cap,
+        )
 
         # Stage 6: Pass 1 (Summarizer) — raises on LLM error
         try:

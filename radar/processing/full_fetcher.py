@@ -22,9 +22,6 @@ import httpx
 import structlog
 import trafilatura
 
-_MAX_RETRIES = 3
-_RETRY_BACKOFF_BASE = 2  # seconds; doubles each attempt
-
 # 3. Internal imports
 from radar.config import PipelineConfig
 from radar.models import FullItem, ScoredItem
@@ -35,6 +32,9 @@ logger = structlog.get_logger(__name__)
 # 5. Constants
 _FETCH_TIMEOUT_SECONDS = 30
 _MIN_WORDS = 50
+_MAX_RETRIES = 3
+_RETRY_BACKOFF_BASE = 2  # seconds; doubles each attempt
+_HTTP_TOO_MANY_REQUESTS = 429
 
 
 class FullFetcher:
@@ -101,8 +101,9 @@ def _fetch_and_extract(url: str, user_agent: str) -> str | None:
             )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 429 and attempt < _MAX_RETRIES:
-                wait = int(exc.response.headers.get("Retry-After", _RETRY_BACKOFF_BASE ** (attempt + 1)))
+            if exc.response.status_code == _HTTP_TOO_MANY_REQUESTS and attempt < _MAX_RETRIES:
+                default_wait = _RETRY_BACKOFF_BASE ** (attempt + 1)
+                wait = int(exc.response.headers.get("Retry-After", default_wait))
                 logger.info("full_fetch_rate_limited", url=url, attempt=attempt + 1, wait_s=wait)
                 time.sleep(wait)
                 continue

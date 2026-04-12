@@ -27,13 +27,14 @@ import httpx
 import structlog
 import trafilatura
 
-# 3. Internal imports — retry config
-_MAX_RETRIES = 3
-_RETRY_BACKOFF_BASE = 2  # seconds; doubles each attempt
-
 # 3. Internal imports
 from radar.cache import url_to_hash
 from radar.models import ExcerptItem, RawItem
+
+# 4. Module-level logger and constants
+_MAX_RETRIES = 3
+_RETRY_BACKOFF_BASE = 2  # seconds; doubles each attempt
+_HTTP_TOO_MANY_REQUESTS = 429
 
 # 4. Module-level logger
 logger = structlog.get_logger(__name__)
@@ -102,8 +103,9 @@ def _fetch_and_extract(url: str) -> str | None:
             response = httpx.get(url, timeout=_FETCH_TIMEOUT_SECONDS, follow_redirects=True)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 429 and attempt < _MAX_RETRIES:
-                wait = int(exc.response.headers.get("Retry-After", _RETRY_BACKOFF_BASE ** (attempt + 1)))
+            if exc.response.status_code == _HTTP_TOO_MANY_REQUESTS and attempt < _MAX_RETRIES:
+                default_wait = _RETRY_BACKOFF_BASE ** (attempt + 1)
+                wait = int(exc.response.headers.get("Retry-After", default_wait))
                 logger.info("excerpt_fetch_rate_limited", url=url, attempt=attempt + 1, wait_s=wait)
                 time.sleep(wait)
                 continue

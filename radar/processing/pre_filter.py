@@ -39,7 +39,7 @@ def _expand_interests(interests: list[str]) -> list[str]:
         tokens.add(lower)
         # also extract individual hyphenated words, skipping stop words
         for token in re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", lower):
-            if token not in _STOP_WORDS and len(token) >= 2:
+            if token not in _STOP_WORDS and len(token) >= 2:  # noqa: PLR2004
                 tokens.add(token)
     return list(tokens)
 
