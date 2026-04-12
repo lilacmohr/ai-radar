@@ -1,0 +1,108 @@
+# ai-radar configuration
+# config.yaml is committed to the repo. Do not put secrets here — use environment variables.
+
+profile:
+  role: "AI engineer and technical architect"   # optional; used in Pass 2 synthesis prompt
+  interests:
+    # Describe what you want to read about. Used in Pass 1 scoring and Pass 2 synthesis.
+    - "agent frameworks and multi-agent systems"
+    - "developer tooling for AI (coding assistants, IDEs, CI/CD integration)"
+    - "LLM evaluation, benchmarks, and reliability in production"
+    - "AI product strategy and roadmap decisions"
+    - "engineering team productivity and AI adoption"
+    - "open-source models and self-hosting tradeoffs"
+    - "AI safety, alignment, and responsible deployment"
+    - "software architecture patterns for AI-powered applications"
+  relevance_threshold: 6  # articles scoring below this (1–10) are dropped after Pass 1; tune after first runs
+
+sources:
+  rss_feeds:
+    enabled: true
+    feeds:
+      # --- Lab / primary source blogs ---
+      - name: "Anthropic Blog"
+        url: "https://www.anthropic.com/blog/rss"
+      - name: "OpenAI Blog"
+        url: "https://openai.com/blog/rss"
+      - name: "Google DeepMind Blog"
+        url: "https://deepmind.google/blog/rss.xml"
+      - name: "Hugging Face Blog"
+        url: "https://huggingface.co/blog/feed.xml"
+
+      # --- Independent researchers (less mainstream, high signal) ---
+      - name: "Simon Willison's Weblog"
+        url: "https://simonwillison.net/atom/everything/"
+      - name: "Ahead of AI (Sebastian Raschka)"
+        url: "https://magazine.sebastianraschka.com/feed"
+      - name: "fast.ai"
+        url: "https://www.fast.ai/index.xml"
+      - name: "Import AI (Jack Clark)"
+        url: "https://jack-clark.net/feed/"
+
+      # --- Critical / contrarian voices ---
+      - name: "Gary Marcus on AI"
+        url: "https://garymarcus.substack.com/feed"
+
+      # --- Engineering & leadership ---
+      - name: "The Pragmatic Engineer"
+        url: "https://newsletter.pragmaticengineer.com/feed"
+      - name: "The Batch (DeepLearning.AI)"
+        url: "https://www.deeplearning.ai/the-batch/feed/"
+
+      # --- Tech press (broader context) ---
+      - name: "MIT Technology Review – AI"
+        url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"
+      - name: "Ars Technica – Technology Lab"
+        url: "https://feeds.arstechnica.com/arstechnica/technology-lab"
+
+  hackernews:
+    enabled: false
+    min_score: 50           # minimum HN points to consider an item; tune after first runs
+    keywords:
+      - "LLM"
+      - "language model"
+      - "AI agent"
+      - "MCP"
+      - "copilot"
+      - "machine learning"
+      - "open source AI"
+      - "vibe coding"
+      - "engineering manager"
+      - "staff engineer"
+      - "technical leadership"
+
+  arxiv:
+    enabled: false
+    categories:
+      - cs.AI    # Artificial Intelligence
+      - cs.LG    # Machine Learning
+      - cs.CL    # Computation and Language (NLP / LLMs)
+      - cs.SE    # Software Engineering
+
+  gmail:
+    enabled: false
+    labels: ["newsletters"]
+    max_age_days: 1
+    newsletter_type: "link_list"  # only supported type in v0.1
+    senders: []             # filter to specific senders; leave empty to process all emails in label
+
+llm:
+  backend: "github_models"  # only supported backend in v0.1
+
+pipeline:
+  max_words_excerpt: 200         # Pass 1 input truncation (words)
+  max_words_full: 800            # Pass 2 input truncation (words)
+  max_articles_to_summarize: 30  # cap on items sent to Pass 1; tune after first runs
+  max_articles_in_digest: 15     # cap on items sent to Pass 2; tune after first runs
+  batch_size: 10                 # articles per LLM call in Pass 1
+  summarization_model: "gpt-4o-mini"  # GitHub Models identifier
+  synthesis_model: "gpt-4o"          # GitHub Models identifier
+  user_agent: "ai-radar/0.1 (personal digest tool)"
+  cache_ttl_days: 30             # days before a seen item expires from the dedup cache
+  max_cost_per_run: 0.10         # optional hard limit in USD; set to 0 to disable
+
+output:
+  format: "markdown"
+  output_dir: "./digests"
+  filename_pattern: "briefing_{date}.md"
+  commit_digests: false     # if true, auto-commit digest files after each run
