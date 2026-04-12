@@ -173,7 +173,20 @@ logger.debug("api_response", body=response.text)  # NO
 Structured logs are machine-parseable — at team scale they feed into observability
 dashboards (Datadog, Grafana) without log parsing gymnastics.
 
-### 4.4 Module Structure
+### 4.4 Refactoring shared utilities
+
+When renaming or moving a function that other modules import, grep the full codebase
+for all import sites before committing:
+
+```bash
+grep -r "from radar.module import fn_name" .
+grep -r "import fn_name" .
+```
+
+Fix every hit before committing. A missed importer produces a mypy `attr-defined` error
+that is invisible until `make typecheck` runs against the full codebase.
+
+### 4.5 Module Structure
 
 Every module follows this layout, in order:
 

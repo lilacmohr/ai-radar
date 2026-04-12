@@ -163,7 +163,7 @@ ai-radar exists as a case study. The process artifacts are the primary output:
 | Issue templates (`[TEST]`, `[IMPL]`, `[SCAFFOLD]`, `[DECISION]`) | Standardized agentic task format |
 | Hook suite (`.claude/settings.json`) | Enforcement layer separating advisory from deterministic |
 | This file | Onboarding guide for new agents and engineers |
-| `docs/pre-implementation-roadmap.md` | Phase structure for AI-first project setup |
+| `docs/roadmap.md` | Full project phase structure and completion status |
 
 The pattern is designed to scale: the same workflow that works for one agent works
 for a team of agents and engineers, because every session starts from the same
