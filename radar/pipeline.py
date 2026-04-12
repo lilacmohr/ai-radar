@@ -128,6 +128,7 @@ class Pipeline:
             scored_items = self._summarizer.summarize(filtered_items)
         except Exception:
             logger.exception("summarizer_failed")
+            self._write_failure_digest(today)
             return _EXIT_FATAL
 
         # Stage 7: full fetch (skip if nothing scored — Synthesizer handles empty list)
@@ -150,6 +151,7 @@ class Pipeline:
             digest.source_stats.update(source_stats)
         except Exception:
             logger.exception("synthesizer_failed")
+            self._write_failure_digest(today)
             return _EXIT_FATAL
 
         # Stage 10: render

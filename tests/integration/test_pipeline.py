@@ -450,6 +450,57 @@ def test_pipeline_llm_error_returns_exit_code_2(
 # ---------------------------------------------------------------------------
 
 
+def test_pipeline_llm_error_writes_failure_digest(
+    monkeypatch: pytest.MonkeyPatch,
+    temp_output_dir: Path,
+) -> None:
+    """A failure-digest file must be written when the LLM is unreachable."""
+
+    class _RaisingClient:
+        def complete(
+            self,
+            system: str,  # noqa: ARG002
+            user: str,  # noqa: ARG002
+            model: str,  # noqa: ARG002
+            response_format: dict[str, str] | None = None,  # noqa: ARG002
+        ) -> str:
+            msg = "LLM API down"
+            raise RuntimeError(msg)
+
+    excerpt_items = [_make_excerpt_item()]
+    monkeypatch.setattr("radar.pipeline.excerpt_fetcher", lambda _items: excerpt_items)
+
+    config = PipelineConfig()
+    profile = ProfileConfig(role="Engineer", interests=["AI"])
+
+    summarizer = Summarizer(_RaisingClient(), config, profile)  # type: ignore[arg-type]
+    pass2_client = TestLLMClient(responses=[_PASS2_CANNED_RESPONSE])
+    synthesizer = Synthesizer(pass2_client, config, profile)
+
+    mock_full_fetcher: MagicMock = MagicMock(spec=FullFetcher)
+    mock_full_fetcher.fetch.return_value = [_make_full_item()]
+
+    cache: MagicMock = MagicMock(spec=Cache)
+    cache.is_seen.return_value = False
+
+    pipeline = Pipeline(
+        config=config,
+        profile=profile,
+        sources=[MockSource([_make_raw_item()])],
+        cache=cache,
+        summarizer=summarizer,
+        full_fetcher=mock_full_fetcher,  # type: ignore[arg-type]
+        truncator=Truncator(config),
+        synthesizer=synthesizer,
+        renderer=MarkdownRenderer(),
+        output_dir=temp_output_dir,
+    )
+    pipeline.run()
+    md_files = list(temp_output_dir.glob("*.md"))
+    assert md_files
+    assert _FAILURE_DIGEST_CONTENT in md_files[0].read_text()
+
+
 def test_pipeline_llm_error_mark_seen_not_called(
     monkeypatch: pytest.MonkeyPatch,
     temp_output_dir: Path,
