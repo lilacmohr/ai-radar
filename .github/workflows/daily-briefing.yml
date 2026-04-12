@@ -55,4 +55,4 @@ jobs:
         with:
           name: briefing-${{ github.run_id }}
           path: digests/
-          if-no-files-found: warn
+          if-no-files-found: error
