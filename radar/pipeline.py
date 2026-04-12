@@ -9,7 +9,7 @@ Pipeline stages in order:
   2. dedup_by_url  → list[RawItem]
   3. excerpt_fetcher → list[ExcerptItem]
   4. dedup_by_content → list[ExcerptItem]
-  5. pre_filter    → list[ExcerptItem]
+  5. cap to max_articles_to_summarize (by recency)
   6. Summarizer (Pass 1) → list[ScoredItem]
   7. FullFetcher   → list[FullItem]
   8. Truncator     → list[FullItem]
@@ -46,7 +46,6 @@ from radar.output.markdown import MarkdownRenderer
 from radar.processing.deduplicator import dedup_by_content, dedup_by_url
 from radar.processing.excerpt_fetcher import excerpt_fetcher
 from radar.processing.full_fetcher import FullFetcher
-from radar.processing.pre_filter import pre_filter
 from radar.processing.truncator import Truncator
 from radar.sources.base import Source
 
@@ -120,12 +119,14 @@ class Pipeline:
         # Stage 4: dedup by content
         deduped_items = dedup_by_content(excerpt_items, self._cache)
 
-        # Stage 5: pre-filter
-        filtered_items = pre_filter(deduped_items, self._profile.interests)
+        # Stage 5: cap articles sent to Pass 1 (sort by recency, take top N)
+        cap = self._config.max_articles_to_summarize
+        capped_items = sorted(deduped_items, key=lambda x: x.published_at or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc), reverse=True)[:cap]
+        logger.info("pre_summarizer_cap", input=len(deduped_items), capped=len(capped_items), cap=cap)
 
         # Stage 6: Pass 1 (Summarizer) — raises on LLM error
         try:
-            scored_items = self._summarizer.summarize(filtered_items)
+            scored_items = self._summarizer.summarize(capped_items)
         except Exception:
             logger.exception("summarizer_failed")
             self._write_failure_digest(today)
@@ -159,6 +160,7 @@ class Pipeline:
 
         # Stage 11: write digest file
         output_path = self._output_dir / f"{today.strftime('%Y-%m-%d')}-digest.md"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(markdown)
         logger.info("digest_written", output_path=str(output_path))
 

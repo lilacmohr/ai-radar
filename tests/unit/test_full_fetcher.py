@@ -211,6 +211,7 @@ def test_fetches_correct_url() -> None:
         "https://example.com/specific",
         timeout=_FETCH_TIMEOUT_SECONDS,
         headers={"User-Agent": PipelineConfig().user_agent},
+        follow_redirects=True,
     )
 
 

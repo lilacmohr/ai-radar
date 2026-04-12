@@ -86,11 +86,11 @@ def test_multiword_keyword_matches_title() -> None:
     assert result == [item]
 
 
-def test_multiword_keyword_no_partial_match() -> None:
-    """'LLM inference' should not match a title with only 'LLM'."""
+def test_multiword_interest_matches_on_individual_token() -> None:
+    """'LLM inference' should match a title containing just 'LLM' (tokenized matching)."""
     item = _make_excerpt_item(title="LLM paper published")
     result = pre_filter([item], ["LLM inference"])
-    assert result == []
+    assert result == [item]
 
 
 # ---------------------------------------------------------------------------

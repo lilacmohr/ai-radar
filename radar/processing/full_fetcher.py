@@ -22,6 +22,9 @@ import httpx
 import structlog
 import trafilatura
 
+_MAX_RETRIES = 3
+_RETRY_BACKOFF_BASE = 2  # seconds; doubles each attempt
+
 # 3. Internal imports
 from radar.config import PipelineConfig
 from radar.models import FullItem, ScoredItem
@@ -88,21 +91,33 @@ class FullFetcher:
 
 def _fetch_and_extract(url: str, user_agent: str) -> str | None:
     """Fetch URL and extract clean text with trafilatura. Returns None on failure."""
-    try:
-        response = httpx.get(
-            url,
-            timeout=_FETCH_TIMEOUT_SECONDS,
-            headers={"User-Agent": user_agent},
-        )
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        logger.warning("full_fetch_http_error", url=url, error=str(exc))
-        return None
-    except httpx.TimeoutException as exc:
-        logger.warning("full_fetch_timeout", url=url, error=str(exc))
-        return None
-    except httpx.ConnectError as exc:
-        logger.warning("full_fetch_connection_error", url=url, error=str(exc))
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            response = httpx.get(
+                url,
+                timeout=_FETCH_TIMEOUT_SECONDS,
+                headers={"User-Agent": user_agent},
+                follow_redirects=True,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429 and attempt < _MAX_RETRIES:
+                wait = int(exc.response.headers.get("Retry-After", _RETRY_BACKOFF_BASE ** (attempt + 1)))
+                logger.info("full_fetch_rate_limited", url=url, attempt=attempt + 1, wait_s=wait)
+                time.sleep(wait)
+                continue
+            logger.warning("full_fetch_http_error", url=url, error=str(exc))
+            return None
+        except httpx.TimeoutException as exc:
+            logger.warning("full_fetch_timeout", url=url, error=str(exc))
+            return None
+        except httpx.ConnectError as exc:
+            logger.warning("full_fetch_connection_error", url=url, error=str(exc))
+            return None
+        else:
+            break
+    else:
+        logger.warning("full_fetch_rate_limited_giving_up", url=url)
         return None
 
     try:
