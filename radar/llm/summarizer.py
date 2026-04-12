@@ -129,6 +129,8 @@ def _try_parse(raw: str) -> list[dict[str, object]] | None:
 
     Strips markdown code fences (e.g. ```json ... ```) before parsing —
     some models emit fences even when instructed not to.
+    Unwraps a top-level {"data": [...]} envelope if present — GitHub Models
+    wraps json_object responses in a data key instead of returning a bare array.
     """
     stripped = raw.strip()
     if stripped.startswith("```"):
@@ -137,6 +139,10 @@ def _try_parse(raw: str) -> list[dict[str, object]] | None:
         result = json.loads(stripped)
         if isinstance(result, list):
             return result
+        if isinstance(result, dict):
+            for key in ("data", "articles", "results", "items"):
+                if isinstance(result.get(key), list):
+                    return result[key]  # type: ignore[return-value]
     except (json.JSONDecodeError, ValueError):
         pass
     return None
