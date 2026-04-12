@@ -1,0 +1,58 @@
+name: Daily Briefing
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 07:00 UTC daily
+  workflow_dispatch:       # manual trigger for testing
+
+permissions:
+  contents: read  # use contents: write when commit_digests: true
+
+jobs:
+  run-briefing:
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_MODELS_TOKEN }}
+      GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+      GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+      GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.0.0
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: cache/
+          key: radar-cache-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: radar-cache-${{ runner.os }}-
+
+      - name: Run pipeline
+        run: uv run python -m radar run
+
+      - name: Save cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: cache/
+          key: radar-cache-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Upload digest artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: briefing-${{ github.run_id }}
+          path: digests/
+          if-no-files-found: warn
