@@ -15,7 +15,7 @@ Verifies the CLI layer (issue #98):
 # 1. Standard library imports
 import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 # 2. Third-party imports
 from click.testing import CliRunner
@@ -345,7 +345,7 @@ def test_cli_check_exits_nonzero_on_failure(tmp_path: Path) -> None:
 
 
 def test_cli_run_passes_config_to_pipeline(tmp_path: Path) -> None:
-    """radar run constructs Pipeline with the loaded config object."""
+    """radar run constructs Pipeline with the loaded Config and config_path."""
     cfg = _config_file(tmp_path)
     mock_pipeline = MagicMock()
     mock_pipeline.run.return_value = _EXIT_SUCCESS
@@ -353,7 +353,8 @@ def test_cli_run_passes_config_to_pipeline(tmp_path: Path) -> None:
         mock_cls.return_value = mock_pipeline
         runner = CliRunner()
         runner.invoke(cli, ["--config", str(cfg), "run"])
-        mock_cls.assert_called_once()
+        # Verify the correct config_path was threaded into the factory (cfg=ANY, config_path=cfg)
+        mock_cls.assert_called_once_with(ANY, cfg)
 
 
 def test_cli_run_missing_config_exits_nonzero(tmp_path: Path) -> None:

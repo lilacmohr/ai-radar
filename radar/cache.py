@@ -20,13 +20,42 @@ import hashlib
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 # Third-party imports
 import structlog
 
 logger = structlog.get_logger(__name__)
 
-__all__ = ["Cache"]
+__all__ = ["Cache", "url_to_hash"]
+
+_TRACKING_PARAMS = frozenset({"fbclid", "gclid", "ref", "source"})
+
+
+def _normalize_url(url: str) -> str:
+    """Strip tracking query parameters and normalize scheme/host to lowercase."""
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    filtered = {
+        k: v for k, v in params.items() if not k.startswith("utm_") and k not in _TRACKING_PARAMS
+    }
+    clean_query = urlencode(filtered, doseq=True)
+    normalized = parsed._replace(
+        scheme=parsed.scheme.lower(),
+        netloc=parsed.netloc.lower(),
+        query=clean_query,
+    )
+    return urlunparse(normalized)
+
+
+def url_to_hash(url: str) -> str:
+    """Return a hex SHA-256 of the normalized URL (tracking params stripped).
+
+    This is the canonical hash scheme used by both the deduplicator and the cache.
+    Use this function everywhere a URL needs to be stored or looked up in the cache.
+    """
+    return hashlib.sha256(_normalize_url(url).encode()).hexdigest()
+
 
 _CREATE_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS seen_items (
@@ -131,7 +160,7 @@ class Cache:
 
     def remove_url(self, url: str) -> bool:
         """Remove all cache entries for the given URL. Returns True if any were removed."""
-        url_hash = hashlib.sha256(url.encode()).hexdigest()
+        url_hash = url_to_hash(url)
         with sqlite3.connect(self._db_path) as conn:
             cursor = conn.execute("DELETE FROM seen_items WHERE url_hash = ?", (url_hash,))
             conn.commit()
