@@ -93,7 +93,11 @@ class Summarizer:
             parsed = _try_parse(raw)
 
         if parsed is None:
-            logger.warning("summarizer_batch_skipped", batch_size=len(batch))
+            logger.warning(
+                "summarizer_batch_skipped",
+                batch_size=len(batch),
+                raw_response=raw[:500],
+            )
             return [], 1
 
         scored = _build_scored_items(parsed, url_to_item, self._profile.relevance_threshold)
