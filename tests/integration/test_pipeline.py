@@ -357,15 +357,13 @@ def test_pipeline_zero_articles_pass_prefilter_returns_exit_code_0(
     monkeypatch: pytest.MonkeyPatch,
     temp_output_dir: Path,
 ) -> None:
-    """Zero articles after pre-filter → minimal digest written, exit code 0."""
-    # Title and excerpt with no interest keyword → pre_filter drops it
-    no_match_item = _make_excerpt_item(
-        title="Breaking news: sports results",
-        excerpt="Breaking news about sports and weather forecasts.",
+    """All articles scored below threshold → minimal digest written, exit code 0."""
+    below_threshold_response = json.dumps(
+        [{"url": _ARTICLE_URL, "score": 1, "summary": "Not relevant."}]
     )
     pipeline, _ = _make_pipeline(
         monkeypatch,
-        excerpt_items=[no_match_item],
+        pass1_responses=[below_threshold_response],
         output_dir=temp_output_dir,
     )
     assert pipeline.run() == _EXIT_SUCCESS
@@ -375,14 +373,13 @@ def test_pipeline_zero_articles_writes_minimal_digest(
     monkeypatch: pytest.MonkeyPatch,
     temp_output_dir: Path,
 ) -> None:
-    """Zero articles → digest file written with no-notable-content message."""
-    no_match_item = _make_excerpt_item(
-        title="Breaking news: sports results",
-        excerpt="Breaking news about sports and weather forecasts.",
+    """All articles scored below threshold → digest file written with no-notable-content message."""
+    below_threshold_response = json.dumps(
+        [{"url": _ARTICLE_URL, "score": 1, "summary": "Not relevant."}]
     )
     pipeline, _ = _make_pipeline(
         monkeypatch,
-        excerpt_items=[no_match_item],
+        pass1_responses=[below_threshold_response],
         output_dir=temp_output_dir,
     )
     pipeline.run()
