@@ -22,36 +22,34 @@ sources:
       # --- Lab / primary source blogs ---
       - name: "Anthropic Blog"
         url: "https://www.anthropic.com/blog/rss"
-      # - name: "OpenAI Blog"
-      #   url: "https://openai.com/blog/rss"
-      # - name: "Google DeepMind Blog"
-      #   url: "https://deepmind.google/blog/rss.xml"
-      # - name: "Hugging Face Blog"
-      #   url: "https://huggingface.co/blog/feed.xml"
+      - name: "OpenAI Blog"
+        url: "https://openai.com/blog/rss"
+      - name: "Google DeepMind Blog"
+        url: "https://deepmind.google/blog/rss.xml"
 
       # --- Independent researchers (less mainstream, high signal) ---
       - name: "Simon Willison's Weblog"
         url: "https://simonwillison.net/atom/everything/"
-      # - name: "Ahead of AI (Sebastian Raschka)"
-      #   url: "https://magazine.sebastianraschka.com/feed"
-      # - name: "fast.ai"
-      #   url: "https://www.fast.ai/index.xml"
-      # - name: "Import AI (Jack Clark)"
-      #   url: "https://jack-clark.net/feed/"
+      - name: "Ahead of AI (Sebastian Raschka)"
+        url: "https://magazine.sebastianraschka.com/feed"
+      - name: "fast.ai"
+        url: "https://www.fast.ai/index.xml"
+      - name: "Import AI (Jack Clark)"
+        url: "https://jack-clark.net/feed/"
 
       # --- Critical / contrarian voices ---
-      # - name: "Gary Marcus on AI"
-      #   url: "https://garymarcus.substack.com/feed"
+      - name: "Gary Marcus on AI"
+        url: "https://garymarcus.substack.com/feed"
 
       # --- Engineering & leadership ---
-      # - name: "The Pragmatic Engineer"
-      #   url: "https://newsletter.pragmaticengineer.com/feed"
-      # - name: "The Batch (DeepLearning.AI)"
-      #   url: "https://www.deeplearning.ai/the-batch/feed/"
+      - name: "The Pragmatic Engineer"
+        url: "https://newsletter.pragmaticengineer.com/feed"
+      - name: "The Batch (DeepLearning.AI)"
+        url: "https://www.deeplearning.ai/the-batch/feed/"
 
       # --- Tech press (broader context) ---
-      # - name: "MIT Technology Review – AI"
-      #   url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"
+      - name: "MIT Technology Review – AI"
+        url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"
       - name: "Ars Technica – Technology Lab"
         url: "https://feeds.arstechnica.com/arstechnica/technology-lab"
 
