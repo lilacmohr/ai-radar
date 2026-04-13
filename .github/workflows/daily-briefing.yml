@@ -17,6 +17,7 @@ jobs:
       GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
       GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
       GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v6
@@ -33,7 +34,7 @@ jobs:
         run: uv sync
 
       - name: Restore cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: cache/
           key: radar-cache-${{ runner.os }}-${{ github.run_id }}
@@ -44,7 +45,7 @@ jobs:
 
       - name: Save cache
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: cache/
           key: radar-cache-${{ runner.os }}-${{ github.run_id }}
