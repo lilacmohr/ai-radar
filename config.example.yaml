@@ -42,8 +42,8 @@ sources:
 # LLM — model aliases decouple pipeline code from provider-specific strings.
 #
 # Aliases are resolved in radar/llm/client.py. The pipeline code only ever
-# uses "fast", "quality", and "fallback" — swap providers here without
-# touching pipeline logic.
+# uses "fast", "quality", "fast_fallback", and "quality_fallback" — swap
+# providers here without touching pipeline logic.
 #
 # LiteLLM provider prefixes:
 #   github_models/  — GitHub Models (reads GH_MODELS_TOKEN from env)
@@ -54,13 +54,16 @@ sources:
 # No code changes required.
 # ---------------------------------------------------------------------------
 llm:
+  backend: "litellm"
   models:
-    fast: "github_models/gpt-4o-mini"       # Pass 1 scoring — optimise for cost
-    quality: "github_models/gpt-4o"         # Pass 2 synthesis — optimise for quality
-    fallback: "anthropic/claude-haiku-4-5-20251001"  # used if primary fails
+    fast: "github_models/gpt-4o-mini"           # Pass 1 scoring — optimise for cost
+    quality: "github_models/gpt-4o"             # Pass 2 synthesis — optimise for quality
+    fast_fallback: "anthropic/claude-haiku-4-5-20251001"    # fallback if Pass 1 primary fails
+    quality_fallback: "anthropic/claude-haiku-4-5-20251001" # fallback if Pass 2 primary fails
 
   # LiteLLM behaviour
-  max_retries: 2        # retries on transient 429/5xx before trying fallback
+  drop_params: true     # silently ignore provider-unsupported params (e.g. seed on GitHub Models)
+  max_retries: 3        # retries on transient 429/5xx before trying fallback
   timeout_seconds: 30   # per-call timeout
 
 pipeline:
