@@ -216,3 +216,4 @@ __marimo__/
 # ai-radar runtime outputs
 digests/
 cache/
+*-digest.md
