@@ -6,7 +6,8 @@ requires-python = ">=3.12"
 dependencies = [
     "feedparser",
     "trafilatura",
-    "openai",
+    "litellm",
+    "langfuse",
     "structlog",
     "click",
     "httpx",
@@ -64,6 +65,8 @@ module = [
     "google.oauth2.*",
     "google_auth_oauthlib.*",
     "yaml",
+    "litellm.*",
+    "langfuse.*",
 ]
 ignore_missing_imports = true
 

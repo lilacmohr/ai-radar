@@ -3,7 +3,7 @@
 # config.yaml is gitignored — never commit it (it may contain feed URLs you prefer private).
 
 profile:
-  role: "AI engineer and technical architect"   # optional; used in Pass 2 synthesis prompt
+  role: "AI engineer and technical architect"   # used in Pass 2 synthesis prompt
   interests:
     # Describe what you want to read about. Used in Pass 1 scoring and Pass 2 synthesis.
     # - "LLM inference and serving"
@@ -11,13 +11,12 @@ profile:
     # - "AI safety and alignment research"
     # - "open-source models"
     # - "developer tooling for AI"
-  relevance_threshold: 6  # articles scoring below this (1–10) are dropped after Pass 1; tune after first runs
+  relevance_threshold: 6  # articles scoring below this (1–10) are dropped after Pass 1
 
 sources:
   rss_feeds:
     enabled: true
     feeds:
-      # Add RSS/Atom feed URLs here, one per line
       # - name: "Anthropic Blog"
       #   url: "https://www.anthropic.com/blog/rss"
       # - name: "OpenAI Blog"
@@ -25,37 +24,81 @@ sources:
 
   hackernews:
     enabled: true
-    min_score: 50           # minimum HN points to consider an item; tune after first runs
-    keywords: []            # optional keyword filter applied before Pass 1
+    min_score: 50
+    keywords: []
 
   arxiv:
     enabled: false
-    categories: []          # ArXiv category identifiers, e.g. cs.AI, cs.LG, cs.CL
+    categories: []   # e.g. cs.AI, cs.LG, cs.CL
 
   gmail:
     enabled: false
     labels: ["newsletters"]
     max_age_days: 1
-    newsletter_type: "link_list"  # only supported type in v0.1
-    senders: []             # filter to specific senders; leave empty to process all emails in label
+    newsletter_type: "link_list"
+    senders: []
 
+# ---------------------------------------------------------------------------
+# LLM — model aliases decouple pipeline code from provider-specific strings.
+#
+# Aliases are resolved in radar/llm/client.py. The pipeline code only ever
+# uses "fast", "quality", and "fallback" — swap providers here without
+# touching pipeline logic.
+#
+# LiteLLM provider prefixes:
+#   github_models/  — GitHub Models (reads GH_MODELS_TOKEN from env)
+#   anthropic/      — Anthropic API (reads ANTHROPIC_API_KEY from env)
+#   openai/         — OpenAI API (reads OPENAI_API_KEY from env)
+#
+# To add a provider, add its API key to .env and change the alias below.
+# No code changes required.
+# ---------------------------------------------------------------------------
 llm:
-  backend: "github_models"  # only supported backend in v0.1
+  models:
+    fast: "github_models/gpt-4o-mini"       # Pass 1 scoring — optimise for cost
+    quality: "github_models/gpt-4o"         # Pass 2 synthesis — optimise for quality
+    fallback: "anthropic/claude-haiku-4-5-20251001"  # used if primary fails
+
+  # LiteLLM behaviour
+  max_retries: 2        # retries on transient 429/5xx before trying fallback
+  timeout_seconds: 30   # per-call timeout
 
 pipeline:
-  max_words_excerpt: 200         # Pass 1 input truncation (words)
-  max_words_full: 800            # Pass 2 input truncation (words)
-  max_articles_to_summarize: 30  # cap on items sent to Pass 1; tune after first runs
-  max_articles_in_digest: 15     # cap on items sent to Pass 2; tune after first runs
-  batch_size: 10                 # articles per LLM call in Pass 1
-  summarization_model: "gpt-4o-mini"  # GitHub Models identifier
-  synthesis_model: "gpt-4o"          # GitHub Models identifier
+  max_words_excerpt: 200          # Pass 1 input truncation (words)
+  max_words_full: 800             # Pass 2 input truncation (words)
+  max_articles_to_summarize: 30   # cap on items sent to Pass 1
+  max_articles_in_digest: 15      # cap on items sent to Pass 2
+  batch_size: 10                  # articles per LLM call in Pass 1
+  max_cost_per_run: 0.10          # soft USD cap; 0 to disable
+
+  # Prompt versions — bump when you change a prompt template.
+  # Used as Langfuse tags so you can filter traces by prompt version
+  # and detect quality regressions after prompt changes.
+  prompt_versions:
+    pass1: "pass1-v1"
+    pass2: "pass2-v1"
+
   user_agent: "ai-radar/0.1 (personal digest tool)"
-  cache_ttl_days: 30             # days before a seen item expires from the dedup cache
-  max_cost_per_run: 0.10         # optional hard limit in USD; set to 0 to disable
+  cache_ttl_days: 30
 
 output:
   format: "markdown"
   output_dir: "./digests"
   filename_pattern: "briefing_{date}.md"
-  commit_digests: false     # if true, auto-commit digest files after each run
+  commit_digests: false
+
+# ---------------------------------------------------------------------------
+# Observability — Langfuse tracing (optional but recommended).
+#
+# If LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY are absent from the
+# environment, tracing is silently disabled. The pipeline runs normally.
+#
+# Langfuse free tier at https://cloud.langfuse.com is sufficient for
+# personal and small-team use. One Langfuse project per team is recommended;
+# use the "project" tag in traces to filter by application.
+#
+# For self-hosted Langfuse, set LANGFUSE_HOST in .env to your instance URL.
+# ---------------------------------------------------------------------------
+observability:
+  project: "ai-radar"   # appears as a tag on every Langfuse trace
+  enabled: true         # set false to disable even when keys are present
