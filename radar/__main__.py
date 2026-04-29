@@ -30,7 +30,7 @@ from pydantic import ValidationError
 # 3. Internal imports
 from radar.cache import Cache
 from radar.config import Config, load_config
-from radar.llm.client import LLMClient
+from radar.llm.client import LLMClient, configure_litellm, configure_model_aliases
 from radar.llm.summarizer import Summarizer
 from radar.llm.synthesizer import Synthesizer
 from radar.output.markdown import MarkdownRenderer
@@ -66,6 +66,8 @@ def Pipeline(cfg: Config, config_path: Path) -> _Pipeline:  # noqa: N802
     All external deps (LLM client, cache, sources) are constructed here.
     Tests patch this name to avoid real API client construction.
     """
+    configure_litellm(drop_params=cfg.llm.drop_params, max_retries=cfg.llm.max_retries)
+    configure_model_aliases(cfg.llm.models)
     client = LLMClient()
     cache = Cache(_cache_db_path(config_path))
     output_dir = Path(cfg.output.output_dir)

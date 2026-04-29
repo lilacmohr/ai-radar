@@ -126,6 +126,10 @@ class LLMConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     backend: Literal["github_models"] = "github_models"
+    models: dict[str, str] = Field(default_factory=dict)
+    max_retries: int = 3
+    drop_params: bool = True
+    timeout_seconds: int = 30
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +152,21 @@ class PipelineConfig(BaseModel):
     user_agent: str = "ai-radar/0.1 (personal digest tool)"
     cache_ttl_days: int = 30
     max_cost_per_run: float = 0.10
+    prompt_versions: dict[str, str] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Sub-models: observability
+# ---------------------------------------------------------------------------
+
+
+class ObservabilityConfig(BaseModel):
+    """Langfuse / tracing config. Tracing only activates when env keys are present."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    project: str = "ai-radar"
+    enabled: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +202,7 @@ class Config(BaseModel):
     sources: SourcesConfig
     llm: LLMConfig = Field(default_factory=LLMConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
+    observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
 
