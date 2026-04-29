@@ -76,10 +76,10 @@ def Pipeline(cfg: Config, config_path: Path) -> _Pipeline:  # noqa: N802
         profile=cfg.profile,
         sources=_build_sources(cfg),
         cache=cache,
-        summarizer=Summarizer(client, cfg.pipeline, cfg.profile),
+        summarizer=Summarizer(client, cfg.pipeline, cfg.profile, cfg.observability),
         full_fetcher=FullFetcher(cfg.pipeline),
         truncator=Truncator(cfg.pipeline),
-        synthesizer=Synthesizer(client, cfg.pipeline, cfg.profile),
+        synthesizer=Synthesizer(client, cfg.pipeline, cfg.profile, cfg.observability),
         renderer=MarkdownRenderer(),
         output_dir=output_dir,
     )

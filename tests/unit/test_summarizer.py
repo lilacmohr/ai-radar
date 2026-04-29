@@ -67,8 +67,8 @@ def _make_profile(
     )
 
 
-def _make_config(batch_size: int = 10, model: str = "gpt-4o-mini") -> PipelineConfig:
-    return PipelineConfig(batch_size=batch_size, summarization_model=model)
+def _make_config(batch_size: int = 10) -> PipelineConfig:
+    return PipelineConfig(batch_size=batch_size)
 
 
 def _llm_response(
@@ -266,11 +266,11 @@ def test_items_from_all_batches_returned() -> None:
     assert len(result) == len(items)
 
 
-def test_uses_configured_summarization_model() -> None:
+def test_uses_fast_model_alias() -> None:
     item = _make_excerpt_item()
     client = TestLLMClient(responses=[_llm_response(url=item.url)])
-    Summarizer(client, _make_config(model="gpt-4o-mini"), _make_profile()).summarize([item])
-    assert client.calls[0]["model"] == "gpt-4o-mini"
+    Summarizer(client, _make_config(), _make_profile()).summarize([item])
+    assert client.calls[0]["model"] == "fast"
 
 
 def test_system_prompt_includes_role() -> None:

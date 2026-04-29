@@ -364,6 +364,7 @@ def test_llm_exception_propagates() -> None:
             user: str,  # noqa: ARG002
             model: str,  # noqa: ARG002
             response_format: dict[str, str] | None = None,  # noqa: ARG002
+            **kwargs: object,  # noqa: ARG002
         ) -> str:
             msg = "API down"
             raise RuntimeError(msg)
@@ -415,7 +416,7 @@ def test_source_stats_is_dict() -> None:
 def test_source_stats_contains_synthesis_model() -> None:
     synthesizer, _ = _make_synthesizer()
     result = synthesizer.synthesize([_make_full_item()])
-    assert result.source_stats.get("synthesis_model") == PipelineConfig().synthesis_model
+    assert result.source_stats.get("synthesis_model") == "quality"
 
 
 # ---------------------------------------------------------------------------

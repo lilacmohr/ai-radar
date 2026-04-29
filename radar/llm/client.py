@@ -16,6 +16,7 @@ every completion (success or error) to prevent data loss in short-lived runs.
 """
 
 import os
+import time
 
 import langfuse  # patch target: radar.llm.client.langfuse.Langfuse
 import litellm
@@ -173,7 +174,9 @@ def _call_litellm(  # noqa: PLR0913
             metadata=metadata,
         )
 
+    t_start = time.monotonic()
     response = litellm.completion(**kwargs)
+    elapsed_ms = int((time.monotonic() - t_start) * 1000)
     content: str = response.choices[0].message.content
 
     logger.info(
@@ -181,6 +184,8 @@ def _call_litellm(  # noqa: PLR0913
         model=model,
         prompt_tokens=response.usage.prompt_tokens,
         completion_tokens=response.usage.completion_tokens,
+        tokens_used=response.usage.prompt_tokens + response.usage.completion_tokens,
+        elapsed_ms=elapsed_ms,
     )
     return content
 

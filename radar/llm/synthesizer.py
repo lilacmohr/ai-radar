@@ -29,7 +29,7 @@ import time
 import structlog
 
 # 3. Internal imports
-from radar.config import PipelineConfig, ProfileConfig
+from radar.config import ObservabilityConfig, PipelineConfig, ProfileConfig
 from radar.llm.client import LLMClient
 from radar.llm.prompts import PASS_2_SYSTEM_TEMPLATE, PASS_2_USER_TEMPLATE
 from radar.models import Digest, FullItem, ScoredItem
@@ -47,10 +47,17 @@ _SECTION_TRENDING_THEMES = "📈 Trending Themes"
 class Synthesizer:
     """Runs LLM Pass 2: synthesizes a Digest from full article text."""
 
-    def __init__(self, client: LLMClient, config: PipelineConfig, profile: ProfileConfig) -> None:
+    def __init__(
+        self,
+        client: LLMClient,
+        config: PipelineConfig,
+        profile: ProfileConfig,
+        observability_config: ObservabilityConfig | None = None,
+    ) -> None:
         self._client = client
         self._config = config
         self._profile = profile
+        self._observability = observability_config
 
     def synthesize(
         self,
@@ -68,7 +75,7 @@ class Synthesizer:
                 contrarian_insights="",
                 follow_up_questions="",
                 trending_themes="",
-                source_stats={"synthesis_model": self._config.synthesis_model},
+                source_stats={"synthesis_model": "quality"},
             )
 
         articles = [_to_scored_item(item) for item in items]
@@ -84,10 +91,15 @@ class Synthesizer:
             date=today.strftime("%Y-%m-%d"),
         )
 
+        project = self._observability.project if self._observability else None
+        prompt_version = self._config.prompt_versions.get("pass2")
         raw = self._client.complete(
             system=system,
             user=user,
-            model=self._config.synthesis_model,
+            model="quality",
+            pipeline_stage="pass2",
+            prompt_version=prompt_version,
+            project=project,
         )
 
         sections = _parse_sections(raw)
@@ -107,7 +119,7 @@ class Synthesizer:
             contrarian_insights=sections.get(_SECTION_CONTRARIAN_INSIGHTS, ""),
             follow_up_questions=sections.get(_SECTION_FOLLOW_UP_QUESTIONS, ""),
             trending_themes=sections.get(_SECTION_TRENDING_THEMES, ""),
-            source_stats={"synthesis_model": self._config.synthesis_model},
+            source_stats={"synthesis_model": "quality"},
         )
 
 
