@@ -15,6 +15,7 @@ LANGFUSE_SECRET_KEY are present in the environment; flush() is called after
 every completion (success or error) to prevent data loss in short-lived runs.
 """
 
+import langfuse  # noqa: F401  # patch target for radar.llm.client.langfuse.Langfuse in tests
 import structlog
 
 logger = structlog.get_logger(__name__)

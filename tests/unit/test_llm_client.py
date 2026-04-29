@@ -76,6 +76,14 @@ def _auth_error() -> litellm.exceptions.AuthenticationError:
     )
 
 
+def _timeout_error() -> litellm.exceptions.Timeout:
+    return litellm.exceptions.Timeout(
+        message="request timed out",
+        llm_provider="github_models",
+        model="gpt-4o-mini",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -247,6 +255,51 @@ def test_complete_no_fallback_when_alias_not_registered() -> None:
     assert mock_completion.call_count == 1
 
 
+def test_rate_limit_error_propagates_without_fallback() -> None:
+    """RateLimitError is not a fallback trigger — it propagates immediately."""
+    configure_model_aliases(
+        {
+            "fast": "github_models/gpt-4o-mini",
+            "fast_fallback": "anthropic/claude-haiku-4-5",
+        }
+    )
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = _rate_limit_error()
+        with pytest.raises(litellm.exceptions.RateLimitError):
+            LLMClient().complete(system="s", user="u", model="fast")
+    assert mock_completion.call_count == 1
+
+
+def test_auth_error_propagates_immediately_even_with_fallback() -> None:
+    """AuthenticationError must never trigger fallback — it is a config failure, not transient."""
+    configure_model_aliases(
+        {
+            "fast": "github_models/gpt-4o-mini",
+            "fast_fallback": "anthropic/claude-haiku-4-5",
+        }
+    )
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = _auth_error()
+        with pytest.raises(litellm.exceptions.AuthenticationError):
+            LLMClient().complete(system="s", user="u", model="fast")
+    assert mock_completion.call_count == 1
+
+
+def test_timeout_propagates_without_fallback() -> None:
+    """Timeout propagates without triggering the fallback model."""
+    configure_model_aliases(
+        {
+            "fast": "github_models/gpt-4o-mini",
+            "fast_fallback": "anthropic/claude-haiku-4-5",
+        }
+    )
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = _timeout_error()
+        with pytest.raises(litellm.exceptions.Timeout):
+            LLMClient().complete(system="s", user="u", model="fast")
+    assert mock_completion.call_count == 1
+
+
 # ---------------------------------------------------------------------------
 # complete(): Langfuse tracing
 # ---------------------------------------------------------------------------
@@ -287,6 +340,31 @@ def test_complete_langfuse_flush_called_even_on_llm_error(
         with pytest.raises((litellm.exceptions.ServiceUnavailableError, RuntimeError)):
             LLMClient().complete(system="s", user="u", model="m")
     mock_instance.flush.assert_called_once()
+
+
+def test_complete_with_langfuse_keys_forwards_trace_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pipeline_stage, prompt_version, project, and metadata must appear in Langfuse trace calls."""
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-test")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-test")
+    with patch(_LITELLM_COMPLETION) as mock_completion, patch(_LANGFUSE_PATCH) as mock_langfuse_cls:
+        mock_completion.return_value = _make_litellm_response()
+        mock_instance = mock_langfuse_cls.return_value
+        LLMClient().complete(
+            system="s",
+            user="u",
+            model="m",
+            pipeline_stage="pass1",
+            prompt_version="pass1-v1",
+            project="ai-radar",
+            metadata={"item_count": 5},
+        )
+    calls_repr = repr(mock_instance.mock_calls)
+    assert "pass1" in calls_repr, "pipeline_stage not forwarded to Langfuse"
+    assert "pass1-v1" in calls_repr, "prompt_version not forwarded to Langfuse"
+    assert "ai-radar" in calls_repr, "project not forwarded to Langfuse"
+    assert "item_count" in calls_repr, "metadata not forwarded to Langfuse"
 
 
 # ---------------------------------------------------------------------------
