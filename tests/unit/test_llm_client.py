@@ -1,309 +1,309 @@
-"""Tests for radar/llm/client.py.
+"""Tests for radar/llm/client.py — TDD red phase for LiteLLM migration (issue #127).
 
-Verifies:
-- complete() returns the LLM response content as a plain str
-- Missing GH_MODELS_TOKEN raises ValueError on construction
-- Retry logic: RateLimitError (429), APIStatusError (5xx), APITimeoutError
-  → exponential backoff (1s, 2s, 4s), max 3 retries
-- Exhaustion: all 3 retries fail → exception propagates (never returns None or "")
-- Partial retry: first attempt fails, second succeeds → returns response
-- Contract: complete() signature matches TestLLMClient; return type is str
+Covers:
+- configure_litellm(): sets litellm globals (drop_params, num_retries)
+- configure_model_aliases(): resolves short aliases ("fast") to provider strings
+- complete(): happy path via litellm.completion, model alias resolution
+- complete(): fallback on ServiceUnavailableError; RuntimeError when both fail
+- complete(): no fallback when alias has no _fallback entry
+- complete(): Langfuse flush() called on success and on error when keys present
+- complete(): Langfuse NOT instantiated when keys are absent
+- Contract: complete() signature matches TestLLMClient (including new kwargs)
 """
 
+from __future__ import annotations
+
 import inspect
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-import openai
+import litellm
+import litellm.exceptions
 import pytest
 
-from radar.llm.client import LLMClient
+import radar.llm.client as _client_module
+from radar.llm.client import LLMClient, configure_litellm, configure_model_aliases
 from tests.conftest import TestLLMClient
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 # ---------------------------------------------------------------------------
-# Constants / patch targets
+# Patch targets
 # ---------------------------------------------------------------------------
 
-_CLIENT_PATCH = "radar.llm.client.openai.OpenAI"
-_SLEEP_PATCH = "radar.llm.client.time.sleep"
-_MAX_ATTEMPTS = 4  # 1 initial + 3 retries (SPEC.md §3.7)
+_LITELLM_COMPLETION = "litellm.completion"
+_LANGFUSE_PATCH = "radar.llm.client.langfuse.Langfuse"
+
+_FALLBACK_CALL_COUNT = 2  # primary attempt + one fallback attempt
 
 # ---------------------------------------------------------------------------
 # Factories
 # ---------------------------------------------------------------------------
 
 
-def _make_openai_response(content: str = "hello from llm") -> MagicMock:
+def _make_litellm_response(content: str = "hello from llm") -> MagicMock:
     mock = MagicMock()
     mock.choices = [MagicMock(message=MagicMock(content=content))]
+    mock.usage = MagicMock(prompt_tokens=10, completion_tokens=20)
     return mock
 
 
-def _rate_limit_error() -> openai.RateLimitError:
-    return openai.RateLimitError("rate limited", response=MagicMock(), body=None)
+def _service_unavailable() -> litellm.exceptions.ServiceUnavailableError:
+    return litellm.exceptions.ServiceUnavailableError(
+        message="service down",
+        llm_provider="github_models",
+        model="gpt-4o-mini",
+        response=MagicMock(),
+    )
 
 
-def _api_status_error() -> openai.APIStatusError:
-    mock_response = MagicMock()
-    mock_response.status_code = 500
-    return openai.APIStatusError("server error", response=mock_response, body=None)
+def _rate_limit_error() -> litellm.exceptions.RateLimitError:
+    return litellm.exceptions.RateLimitError(
+        message="rate limited",
+        llm_provider="github_models",
+        model="gpt-4o-mini",
+        response=MagicMock(),
+    )
 
 
-def _timeout_error() -> openai.APITimeoutError:
-    return openai.APITimeoutError(request=MagicMock())
+def _auth_error() -> litellm.exceptions.AuthenticationError:
+    return litellm.exceptions.AuthenticationError(
+        message="unauthorized",
+        llm_provider="github_models",
+        model="gpt-4o-mini",
+        response=MagicMock(),
+    )
 
 
 # ---------------------------------------------------------------------------
-# Happy path: return value
+# Fixtures
 # ---------------------------------------------------------------------------
 
 
-def test_complete_returns_str(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.return_value = _make_openai_response()
+@pytest.fixture(autouse=True)
+def _reset_model_aliases() -> Generator[None, None, None]:
+    """Clear module-level _MODEL_ALIASES before and after each test."""
+    _client_module._MODEL_ALIASES.clear()  # noqa: SLF001
+    yield
+    _client_module._MODEL_ALIASES.clear()  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# configure_litellm
+# ---------------------------------------------------------------------------
+
+
+def test_configure_litellm_sets_drop_params() -> None:
+    configure_litellm(drop_params=True, max_retries=3)
+    assert litellm.drop_params is True
+
+
+def test_configure_litellm_sets_num_retries() -> None:
+    configure_litellm(drop_params=False, max_retries=5)
+    assert litellm.num_retries == 5  # noqa: PLR2004
+
+
+def test_configure_litellm_drop_params_false() -> None:
+    configure_litellm(drop_params=False, max_retries=1)
+    assert litellm.drop_params is False
+
+
+# ---------------------------------------------------------------------------
+# configure_model_aliases
+# ---------------------------------------------------------------------------
+
+
+def test_configure_model_aliases_resolves_alias_in_complete() -> None:
+    """complete(model="fast") must call litellm.completion with the resolved model string."""
+    configure_model_aliases({"fast": "github_models/gpt-4o-mini"})
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
+        LLMClient().complete(system="s", user="u", model="fast")
+    assert mock_completion.call_args.kwargs["model"] == "github_models/gpt-4o-mini"
+
+
+def test_configure_model_aliases_passes_literal_model_if_no_alias() -> None:
+    """If model string is not in _MODEL_ALIASES, pass it through unchanged."""
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
+        LLMClient().complete(system="s", user="u", model="github_models/gpt-4o-mini")
+    assert mock_completion.call_args.kwargs["model"] == "github_models/gpt-4o-mini"
+
+
+# ---------------------------------------------------------------------------
+# complete(): happy path
+# ---------------------------------------------------------------------------
+
+
+def test_complete_returns_str() -> None:
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
         result = LLMClient().complete(system="sys", user="usr", model="gpt-4o-mini")
     assert isinstance(result, str)
 
 
-def test_complete_returns_response_content(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.return_value = _make_openai_response(
-            "expected content"
-        )
+def test_complete_returns_response_content() -> None:
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response("expected content")
         result = LLMClient().complete(system="sys", user="usr", model="gpt-4o-mini")
     assert result == "expected content"
 
 
-def test_complete_passes_system_and_user_as_messages(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.return_value = _make_openai_response()
+def test_complete_passes_system_and_user_as_messages() -> None:
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
         LLMClient().complete(system="my-system", user="my-user", model="gpt-4o-mini")
-        messages = mock_create.call_args.kwargs["messages"]
+        messages = mock_completion.call_args.kwargs["messages"]
     assert any(m["content"] == "my-system" for m in messages)
     assert any(m["content"] == "my-user" for m in messages)
 
 
-def test_complete_passes_model_to_api(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.return_value = _make_openai_response()
-        LLMClient().complete(system="s", user="u", model="gpt-4o")
-        assert mock_create.call_args.kwargs["model"] == "gpt-4o"
+def test_complete_passes_model_to_litellm() -> None:
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
+        LLMClient().complete(system="s", user="u", model="github_models/gpt-4o")
+    assert mock_completion.call_args.kwargs["model"] == "github_models/gpt-4o"
 
 
-def test_multiple_sequential_calls_return_correct_responses(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.side_effect = [
-            _make_openai_response("first"),
-            _make_openai_response("second"),
+def test_complete_multiple_sequential_calls_return_correct_responses() -> None:
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = [
+            _make_litellm_response("first"),
+            _make_litellm_response("second"),
         ]
         client = LLMClient()
-        r1 = client.complete(system="s", user="u1", model="gpt-4o-mini")
-        r2 = client.complete(system="s", user="u2", model="gpt-4o-mini")
+        r1 = client.complete(system="s", user="u1", model="m")
+        r2 = client.complete(system="s", user="u2", model="m")
     assert r1 == "first"
     assert r2 == "second"
 
 
 # ---------------------------------------------------------------------------
-# Missing token
+# complete(): response_format passthrough
 # ---------------------------------------------------------------------------
 
 
-def test_missing_token_raises_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("GH_MODELS_TOKEN", raising=False)
-    with pytest.raises(ValueError, match="GH_MODELS_TOKEN"):
-        LLMClient()
+def test_response_format_forwarded_when_provided() -> None:
+    fmt = {"type": "json_object"}
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
+        LLMClient().complete(system="s", user="u", model="m", response_format=fmt)
+    assert mock_completion.call_args.kwargs["response_format"] == fmt
+
+
+def test_response_format_omitted_when_none() -> None:
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.return_value = _make_litellm_response()
+        LLMClient().complete(system="s", user="u", model="m", response_format=None)
+    assert "response_format" not in mock_completion.call_args.kwargs
 
 
 # ---------------------------------------------------------------------------
-# Retry: RateLimitError  # noqa: ERA001
+# complete(): fallback on transient errors
 # ---------------------------------------------------------------------------
 
 
-def test_rate_limit_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = [_rate_limit_error(), _make_openai_response("ok")]
-        result = LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-    assert result == "ok"
-
-
-def test_rate_limit_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -> None:
-    """1 initial attempt + 3 retries = 4 total calls before giving up."""
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = _rate_limit_error()
-        with pytest.raises(openai.RateLimitError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-        assert mock_create.call_count == _MAX_ATTEMPTS
-
-
-def test_rate_limit_exhaustion_raises_not_returns(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.side_effect = _rate_limit_error()
-        with pytest.raises(openai.RateLimitError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-
-
-# ---------------------------------------------------------------------------
-# Retry: APIStatusError (5xx)
-# ---------------------------------------------------------------------------
-
-
-def test_api_status_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = [_api_status_error(), _make_openai_response("ok")]
-        result = LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-    assert result == "ok"
-
-
-def test_api_status_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = _api_status_error()
-        with pytest.raises(openai.APIStatusError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-        assert mock_create.call_count == _MAX_ATTEMPTS
-
-
-def test_api_status_error_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.side_effect = _api_status_error()
-        with pytest.raises(openai.APIStatusError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-
-
-def test_api_status_error_4xx_does_not_retry(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Non-5xx APIStatusError (e.g. 401) must not be retried (SPEC.md §3.7)."""
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    mock_response = MagicMock()
-    mock_response.status_code = 401
-    err = openai.APIStatusError("unauthorized", response=mock_response, body=None)
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH) as mock_sleep:
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = err
-        with pytest.raises(openai.APIStatusError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-        assert mock_create.call_count == 1  # no retry on 4xx
-        mock_sleep.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# Retry: timeout  # noqa: ERA001
-# ---------------------------------------------------------------------------
-
-
-def test_timeout_error_retries_and_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = [_timeout_error(), _make_openai_response("ok")]
-        result = LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-    assert result == "ok"
-
-
-def test_timeout_error_total_attempts_is_four(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.side_effect = _timeout_error()
-        with pytest.raises(openai.APITimeoutError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-        assert mock_create.call_count == _MAX_ATTEMPTS
-
-
-def test_timeout_exhaustion_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.side_effect = _timeout_error()
-        with pytest.raises(openai.APITimeoutError):
-            LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-
-
-# ---------------------------------------------------------------------------
-# Retry: exponential backoff sleep durations
-# ---------------------------------------------------------------------------
-
-
-def test_retry_sleeps_with_1_2_4_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Backoff delays must be 1s, 2s, 4s on successive retries."""
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH) as mock_sleep:
-        mock_openai.return_value.chat.completions.create.side_effect = [
-            _rate_limit_error(),
-            _rate_limit_error(),
-            _rate_limit_error(),
-            _make_openai_response(),
+def test_complete_falls_back_on_service_unavailable() -> None:
+    """Primary model ServiceUnavailableError → fallback model returns response."""
+    configure_model_aliases(
+        {
+            "fast": "github_models/gpt-4o-mini",
+            "fast_fallback": "anthropic/claude-haiku-4-5",
+        }
+    )
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = [
+            _service_unavailable(),
+            _make_litellm_response("fallback response"),
         ]
-        LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-    sleep_durations = [c.args[0] for c in mock_sleep.call_args_list]
-    assert sleep_durations == [1, 2, 4]
+        result = LLMClient().complete(system="s", user="u", model="fast")
+    assert result == "fallback response"
+    assert mock_completion.call_count == _FALLBACK_CALL_COUNT
+    second_model = mock_completion.call_args_list[1].kwargs["model"]
+    assert second_model == "anthropic/claude-haiku-4-5"
 
 
-def test_no_sleep_on_success_without_retry(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH) as mock_sleep:
-        mock_openai.return_value.chat.completions.create.return_value = _make_openai_response()
-        LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-    mock_sleep.assert_not_called()
+def test_complete_raises_runtime_error_if_primary_and_fallback_both_fail() -> None:
+    """If both primary and fallback fail, RuntimeError is raised."""
+    configure_model_aliases(
+        {
+            "quality": "github_models/gpt-4o",
+            "quality_fallback": "anthropic/claude-haiku-4-5",
+        }
+    )
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = [_service_unavailable(), _service_unavailable()]
+        with pytest.raises(RuntimeError):
+            LLMClient().complete(system="s", user="u", model="quality")
+
+
+def test_complete_no_fallback_when_alias_not_registered() -> None:
+    """If model has no fallback alias, transient error propagates immediately."""
+    with patch(_LITELLM_COMPLETION) as mock_completion:
+        mock_completion.side_effect = _service_unavailable()
+        with pytest.raises(litellm.exceptions.ServiceUnavailableError):
+            LLMClient().complete(system="s", user="u", model="github_models/gpt-4o-mini")
+    assert mock_completion.call_count == 1
 
 
 # ---------------------------------------------------------------------------
-# Contract
+# complete(): Langfuse tracing
+# ---------------------------------------------------------------------------
+
+
+def test_complete_without_langfuse_keys_no_langfuse_instantiated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When LANGFUSE_PUBLIC_KEY is absent, Langfuse must not be instantiated."""
+    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
+    with patch(_LITELLM_COMPLETION) as mock_completion, patch(_LANGFUSE_PATCH) as mock_langfuse:
+        mock_completion.return_value = _make_litellm_response()
+        LLMClient().complete(system="s", user="u", model="m")
+    mock_langfuse.assert_not_called()
+
+
+def test_complete_with_langfuse_keys_calls_flush(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When Langfuse keys are present, flush() must be called after each completion."""
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-test")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-test")
+    with patch(_LITELLM_COMPLETION) as mock_completion, patch(_LANGFUSE_PATCH) as mock_langfuse_cls:
+        mock_completion.return_value = _make_litellm_response()
+        mock_instance = mock_langfuse_cls.return_value
+        LLMClient().complete(system="s", user="u", model="m")
+    mock_instance.flush.assert_called_once()
+
+
+def test_complete_langfuse_flush_called_even_on_llm_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Langfuse flush() must be called even when litellm.completion raises."""
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-test")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-test")
+    with patch(_LITELLM_COMPLETION) as mock_completion, patch(_LANGFUSE_PATCH) as mock_langfuse_cls:
+        mock_completion.side_effect = _service_unavailable()
+        mock_instance = mock_langfuse_cls.return_value
+        with pytest.raises((litellm.exceptions.ServiceUnavailableError, RuntimeError)):
+            LLMClient().complete(system="s", user="u", model="m")
+    mock_instance.flush.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Contract: signature parity between LLMClient and TestLLMClient
 # ---------------------------------------------------------------------------
 
 
 def test_complete_signature_matches_test_llm_client() -> None:
-    """LLMClient and TestLLMClient must have identical complete() parameter names."""
+    """LLMClient.complete and TestLLMClient.complete must have identical parameter names."""
     llm_params = list(inspect.signature(LLMClient.complete).parameters.keys())
     test_params = list(inspect.signature(TestLLMClient.complete).parameters.keys())
     assert llm_params == test_params
 
 
-def test_return_type_is_str_not_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_openai.return_value.chat.completions.create.return_value = _make_openai_response()
-        result = LLMClient().complete(system="s", user="u", model="gpt-4o-mini")
-    assert result is not None
-    assert type(result) is str
-
-
-# ---------------------------------------------------------------------------
-# response_format passthrough
-# ---------------------------------------------------------------------------
-
-
-def test_response_format_forwarded_to_api_when_provided(monkeypatch: pytest.MonkeyPatch) -> None:
-    """response_format kwarg must be forwarded to the underlying API call."""
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    fmt = {"type": "json_object"}
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.return_value = _make_openai_response()
-        LLMClient().complete(system="s", user="u", model="gpt-4o-mini", response_format=fmt)
-        assert mock_create.call_args.kwargs["response_format"] == fmt
-
-
-def test_response_format_omitted_from_api_when_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When response_format=None, the key must not appear in the API call kwargs."""
-    monkeypatch.setenv("GH_MODELS_TOKEN", "fake-token")
-    with patch(_CLIENT_PATCH) as mock_openai, patch(_SLEEP_PATCH):
-        mock_create = mock_openai.return_value.chat.completions.create
-        mock_create.return_value = _make_openai_response()
-        LLMClient().complete(system="s", user="u", model="gpt-4o-mini", response_format=None)
-        assert "response_format" not in mock_create.call_args.kwargs
+def test_new_kwargs_all_default_to_none() -> None:
+    """pipeline_stage, prompt_version, project, metadata must all default to None."""
+    sig = inspect.signature(LLMClient.complete)
+    for kwarg in ("pipeline_stage", "prompt_version", "project", "metadata"):
+        assert kwarg in sig.parameters, f"missing param: {kwarg}"
+        assert sig.parameters[kwarg].default is None, f"{kwarg} default is not None"

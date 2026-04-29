@@ -46,16 +46,29 @@ class TestLLMClient:
         self.call_count: int = 0
         self.calls: list[dict[str, object]] = []
 
-    def complete(
+    def complete(  # noqa: PLR0913
         self,
         system: str,
         user: str,
         model: str,
         response_format: dict[str, str] | None = None,
+        pipeline_stage: str | None = None,
+        prompt_version: str | None = None,
+        project: str | None = None,
+        metadata: dict[str, object] | None = None,
     ) -> str:
         """Return the next canned response, cycling if exhausted."""
         self.calls.append(
-            {"system": system, "user": user, "model": model, "response_format": response_format}
+            {
+                "system": system,
+                "user": user,
+                "model": model,
+                "response_format": response_format,
+                "pipeline_stage": pipeline_stage,
+                "prompt_version": prompt_version,
+                "project": project,
+                "metadata": metadata,
+            }
         )
         response = self.responses[self.call_count % len(self.responses)] if self.responses else ""
         self.call_count += 1
