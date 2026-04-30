@@ -168,10 +168,17 @@ def _call_litellm(  # noqa: PLR0913
     tags = [project] if project else []
     with langfuse.propagate_attributes(tags=tags) if lf_client is not None else _nullcontext():
         observation = (
-            _start_langfuse_generation(lf_client, model=model, pipeline_stage=pipeline_stage,
-                                       prompt_version=prompt_version, project=project,
-                                       metadata=metadata, messages=messages)
-            if lf_client is not None else None
+            _start_langfuse_generation(
+                lf_client,
+                model=model,
+                pipeline_stage=pipeline_stage,
+                prompt_version=prompt_version,
+                project=project,
+                metadata=metadata,
+                messages=messages,
+            )
+            if lf_client is not None
+            else None
         )
         t_start = time.monotonic()
         response = litellm.completion(**kwargs)
