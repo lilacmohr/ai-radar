@@ -104,4 +104,3 @@ output:
 # ---------------------------------------------------------------------------
 observability:
   project: "ai-radar"   # appears as a tag on every Langfuse trace
-  enabled: true         # set false to disable even when keys are present

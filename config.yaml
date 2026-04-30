@@ -115,7 +115,6 @@ pipeline:
 
 observability:
   project: "ai-radar"   # appears as a tag on every Langfuse trace
-  enabled: true         # set false to disable tracing even when Langfuse keys are present
 
 output:
   format: "markdown"

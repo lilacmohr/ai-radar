@@ -42,7 +42,7 @@ def configure_litellm(*, drop_params: bool, max_retries: int) -> None:
 def configure_model_aliases(aliases: dict[str, str]) -> None:
     """Register model alias → provider model string mappings.
 
-    Example: {"fast": "github_models/gpt-4o-mini", "fast_fallback": "anthropic/claude-haiku-4-5"}
+    Example: {"fast": "github/gpt-4o-mini", "fast_fallback": "anthropic/claude-haiku-4-5"}
     """
     _MODEL_ALIASES.update(aliases)
 
@@ -213,7 +213,7 @@ def _start_langfuse_generation(  # noqa: PLR0913
     project: str | None,
     metadata: dict[str, object] | None,
     messages: list[dict[str, str]],
-) -> "langfuse._client.span.LangfuseObservationWrapper":
+) -> object:
     return lf_client.start_observation(
         as_type="generation",
         name=pipeline_stage or "llm_completion",
