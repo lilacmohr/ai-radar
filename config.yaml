@@ -85,7 +85,16 @@ sources:
     senders: []             # filter to specific senders; leave empty to process all emails in label
 
 llm:
-  backend: "github_models"  # only supported backend in v0.1
+  backend: "litellm"
+  models:
+    fast: "github/gpt-4o-mini"           # Pass 1 scoring — optimise for cost
+    quality: "github/gpt-4o"             # Pass 2 synthesis — optimise for quality
+    fast_fallback: "anthropic/claude-haiku-4-5-20251001"
+    quality_fallback: "anthropic/claude-haiku-4-5-20251001"
+
+  drop_params: true     # silently ignore provider-unsupported params (e.g. seed on GitHub Models)
+  max_retries: 3        # retries on transient 429/5xx before trying fallback
+  timeout_seconds: 30   # per-call timeout
 
 pipeline:
   max_words_excerpt: 200         # Pass 1 input truncation (words)
@@ -93,11 +102,20 @@ pipeline:
   max_articles_to_summarize: 30  # cap on items sent to Pass 1; tune after first runs
   max_articles_in_digest: 8      # cap on items sent to Pass 2; tune after first runs
   batch_size: 10                 # articles per LLM call in Pass 1
-  summarization_model: "gpt-4o-mini"  # GitHub Models identifier
-  synthesis_model: "gpt-4o"          # GitHub Models identifier
+  max_cost_per_run: 0.10         # optional hard limit in USD; set to 0 to disable
+
+  # Prompt versions — bump when you change a prompt template.
+  # Used as Langfuse tags so you can filter traces by version and detect quality regressions.
+  prompt_versions:
+    pass1: "pass1-v1"
+    pass2: "pass2-v1"
+
   user_agent: "ai-radar/0.1 (personal digest tool)"
   cache_ttl_days: 30             # days before a seen item expires from the dedup cache
-  max_cost_per_run: 0.10         # optional hard limit in USD; set to 0 to disable
+
+observability:
+  project: "ai-radar"   # appears as a tag on every Langfuse trace
+  enabled: true         # set false to disable tracing even when Langfuse keys are present
 
 output:
   format: "markdown"

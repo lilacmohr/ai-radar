@@ -394,13 +394,14 @@ business logic where they're invisible to reviewers.
 
 ## 9. Dependencies
 
-**Approved dependencies (from SPEC.md §4.5):**
+**Approved dependencies:**
 
 | Package | Purpose |
 |---|---|
 | `feedparser` | RSS/Atom parsing |
 | `trafilatura` | Web content extraction |
-| `openai` | GitHub Models API client |
+| `litellm` | Unified LLM client — routes to GitHub Models, Anthropic, OpenAI, etc. |
+| `langfuse` | LLM observability — traces every call; silently disabled when keys absent |
 | `structlog` | Structured logging |
 | `click` | CLI framework |
 | `httpx` | HTTP client (prefer over requests) |
@@ -411,7 +412,7 @@ business logic where they're invisible to reviewers.
 **To add a new dependency:** Stop. Add it to `pyproject.toml` and surface as a
 DECISION NEEDED (see §3). Don't import packages not in this list.
 
-**Post-MVP only (do not use):** `anthropic` SDK, async frameworks.
+**Post-MVP only (do not use):** async frameworks.
 
 ---
 

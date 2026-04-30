@@ -17,6 +17,7 @@ every completion (success or error) to prevent data loss in short-lived runs.
 
 import os
 import time
+from contextlib import nullcontext as _nullcontext
 
 import langfuse  # patch target: radar.llm.client.langfuse.Langfuse
 import litellm
@@ -164,20 +165,27 @@ def _call_litellm(  # noqa: PLR0913
     if response_format is not None:
         kwargs["response_format"] = response_format
 
-    if lf_client is not None:
-        _record_langfuse_observation(
-            lf_client,
-            model=model,
-            pipeline_stage=pipeline_stage,
-            prompt_version=prompt_version,
-            project=project,
-            metadata=metadata,
+    tags = [project] if project else []
+    with langfuse.propagate_attributes(tags=tags) if lf_client is not None else _nullcontext():
+        observation = (
+            _start_langfuse_generation(lf_client, model=model, pipeline_stage=pipeline_stage,
+                                       prompt_version=prompt_version, project=project,
+                                       metadata=metadata, messages=messages)
+            if lf_client is not None else None
         )
-
-    t_start = time.monotonic()
-    response = litellm.completion(**kwargs)
-    elapsed_ms = int((time.monotonic() - t_start) * 1000)
-    content: str = response.choices[0].message.content
+        t_start = time.monotonic()
+        response = litellm.completion(**kwargs)
+        elapsed_ms = int((time.monotonic() - t_start) * 1000)
+        content: str = response.choices[0].message.content
+        if observation is not None:
+            observation.update(
+                output=content,
+                usage_details={
+                    "input": response.usage.prompt_tokens,
+                    "output": response.usage.completion_tokens,
+                },
+            )
+            observation.end()
 
     logger.info(
         "llm_completion",
@@ -196,7 +204,7 @@ def _make_langfuse_client() -> "langfuse.Langfuse | None":
     return None
 
 
-def _record_langfuse_observation(  # noqa: PLR0913
+def _start_langfuse_generation(  # noqa: PLR0913
     lf_client: "langfuse.Langfuse",
     *,
     model: str,
@@ -204,11 +212,13 @@ def _record_langfuse_observation(  # noqa: PLR0913
     prompt_version: str | None,
     project: str | None,
     metadata: dict[str, object] | None,
-) -> None:
-    lf_client.start_observation(
+    messages: list[dict[str, str]],
+) -> "langfuse._client.span.LangfuseObservationWrapper":
+    return lf_client.start_observation(
         as_type="generation",
         name=pipeline_stage or "llm_completion",
         version=prompt_version,
+        input=messages,
         metadata={"model": model, "project": project, **(metadata or {})},
         model=model,
     )

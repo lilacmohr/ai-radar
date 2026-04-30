@@ -25,7 +25,10 @@ from pathlib import Path
 # 2. Third-party imports
 import click
 import structlog
+from dotenv import load_dotenv
 from pydantic import ValidationError
+
+load_dotenv()
 
 # 3. Internal imports
 from radar.cache import Cache
