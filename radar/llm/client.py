@@ -23,6 +23,7 @@ import langfuse  # patch target: radar.llm.client.langfuse.Langfuse
 import litellm
 import litellm.exceptions
 import structlog
+from langfuse import LangfuseGeneration
 
 logger = structlog.get_logger(__name__)
 
@@ -220,7 +221,7 @@ def _start_langfuse_generation(  # noqa: PLR0913
     project: str | None,
     metadata: dict[str, object] | None,
     messages: list[dict[str, str]],
-) -> object:
+) -> LangfuseGeneration:
     return lf_client.start_observation(
         as_type="generation",
         name=pipeline_stage or "llm_completion",
