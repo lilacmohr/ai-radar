@@ -164,7 +164,6 @@ class ObservabilityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     project: str = "ai-radar"
-    enabled: bool = True
 
 
 # ---------------------------------------------------------------------------

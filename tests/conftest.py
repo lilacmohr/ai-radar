@@ -75,6 +75,18 @@ class TestLLMClient:
         return response
 
 
+@pytest.fixture(autouse=True)
+def _clear_langfuse_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remove Langfuse keys from the environment for every test.
+
+    Tests that need real (or fake) keys set them explicitly via monkeypatch.setenv.
+    Prevents real Langfuse traces from being emitted when running the suite locally
+    with production credentials present in the shell environment.
+    """
+    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
+
+
 @pytest.fixture
 def test_llm_client() -> TestLLMClient:
     """Return a fresh TestLLMClient with no canned responses."""

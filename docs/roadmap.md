@@ -3,7 +3,7 @@
 > **Project:** ai-radar (daily briefing pipeline)
 > **Meta-goal:** AI Engineering Playbook — ai-radar is the reference implementation.
 > **Agent:** Claude Code | **Issues:** GitHub Issues | **Priority:** Process first, then ship.
-> **Last updated:** 2026-04-12 (P5 complete — all five modules done; pipeline ready for first end-to-end run)
+> **Last updated:** 2026-04-29 (PR #131: LiteLLM + Langfuse migration complete; pipeline production-ready)
 
 ---
 
@@ -223,4 +223,5 @@ using ai-radar as the reference implementation.
 18. **✅ P5.3 complete** — CLI entry point (issues #98, #99; PRs #106, #107) merged 2026-04-12
 19. **✅ P5.4 complete** — GitHub Actions daily workflow (issue #100; PR #113) merged 2026-04-12
 20. **✅ P5.5 complete** — Sample briefing (issue #101; PR #114) merged 2026-04-12
-21. **⬜ First end-to-end run** — trigger `workflow_dispatch` on `daily-briefing.yml`; verify digest artifact is produced
+21. **✅ LiteLLM + Langfuse migration** — PR #131 merged 2026-04-29; `openai` client replaced with LiteLLM, model aliases + fallbacks wired, Langfuse tracing optional
+22. **⬜ First end-to-end run** — trigger `workflow_dispatch` on `daily-briefing.yml`; verify digest artifact is produced

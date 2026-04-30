@@ -25,6 +25,7 @@ from pathlib import Path
 # 2. Third-party imports
 import click
 import structlog
+from dotenv import load_dotenv
 from pydantic import ValidationError
 
 # 3. Internal imports
@@ -43,6 +44,8 @@ from radar.sources.base import Source
 from radar.sources.gmail import GmailSource
 from radar.sources.hn import HNSource
 from radar.sources.rss import RSSSource
+
+load_dotenv()
 
 # 4. Module-level logger
 logger = structlog.get_logger(__name__)
