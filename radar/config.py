@@ -121,11 +121,15 @@ class SourcesConfig(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    """LLM backend config. Only github_models is supported in v0.1."""
+    """LLM backend config. Routes all calls through litellm."""
 
     model_config = ConfigDict(extra="forbid")
 
-    backend: Literal["github_models"] = "github_models"
+    backend: Literal["litellm"] = "litellm"
+    models: dict[str, str] = Field(default_factory=dict)
+    max_retries: int = 3
+    drop_params: bool = True
+    timeout_seconds: int = 30
 
 
 # ---------------------------------------------------------------------------
@@ -143,11 +147,24 @@ class PipelineConfig(BaseModel):
     max_articles_to_summarize: int = 30
     max_articles_in_digest: int = 15
     batch_size: int = 10
-    summarization_model: str = "gpt-4o-mini"
-    synthesis_model: str = "gpt-4o"
     user_agent: str = "ai-radar/0.1 (personal digest tool)"
     cache_ttl_days: int = 30
     max_cost_per_run: float = 0.10
+    prompt_versions: dict[str, str] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Sub-models: observability
+# ---------------------------------------------------------------------------
+
+
+class ObservabilityConfig(BaseModel):
+    """Langfuse / tracing config. Tracing only activates when env keys are present."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    project: str = "ai-radar"
+    enabled: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +200,7 @@ class Config(BaseModel):
     sources: SourcesConfig
     llm: LLMConfig = Field(default_factory=LLMConfig)
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
+    observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
 

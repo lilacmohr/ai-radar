@@ -57,7 +57,7 @@ sources:
     senders: []
 
 llm:
-  backend: "github_models"
+  backend: "litellm"
 
 pipeline:
   max_words_excerpt: 200
@@ -65,8 +65,6 @@ pipeline:
   max_articles_to_summarize: 30
   max_articles_in_digest: 15
   batch_size: 10
-  summarization_model: "gpt-4o-mini"
-  synthesis_model: "gpt-4o"
   user_agent: "ai-radar/0.1"
   cache_ttl_days: 30
   max_cost_per_run: 0.10
@@ -80,7 +78,7 @@ output:
 
 # Expected defaults (defined as constants to avoid magic values in assertions)
 DEFAULT_RELEVANCE_THRESHOLD = 6
-DEFAULT_LLM_BACKEND = "github_models"
+DEFAULT_LLM_BACKEND = "litellm"
 
 
 # ---------------------------------------------------------------------------
@@ -196,10 +194,10 @@ def test_profile_relevance_threshold_defaults_to_6_when_not_specified(
     assert config.profile.relevance_threshold == DEFAULT_RELEVANCE_THRESHOLD
 
 
-def test_llm_backend_defaults_to_github_models_when_not_specified(
+def test_llm_backend_defaults_to_litellm_when_not_specified(
     tmp_path: Path,
 ) -> None:
-    """llm.backend defaults to 'github_models' per SPEC.md §3.5."""
+    """llm.backend defaults to 'litellm' per SPEC.md §3.5 (updated in P6.2)."""
     config_file = tmp_path / "config.yaml"
     config_file.write_text(MINIMAL_VALID_CONFIG)
     config = load_config(config_file)
@@ -333,7 +331,7 @@ sources:
 def test_load_config_raises_validation_error_on_unsupported_llm_backend(
     tmp_path: Path,
 ) -> None:
-    """llm.backend='anthropic' is post-MVP; must raise ValidationError in v0.1."""
+    """llm.backend only accepts 'litellm'; anything else must raise ValidationError."""
     config_file = tmp_path / "config.yaml"
     config_file.write_text(MINIMAL_VALID_CONFIG + "\nllm:\n  backend: anthropic\n")
     with pytest.raises(ValidationError, match="backend"):

@@ -15,7 +15,7 @@ import time
 
 import structlog
 
-from radar.config import PipelineConfig, ProfileConfig
+from radar.config import ObservabilityConfig, PipelineConfig, ProfileConfig
 from radar.llm.client import LLMClient
 from radar.llm.prompts import PASS_1_SYSTEM_TEMPLATE, PASS_1_USER_TEMPLATE
 from radar.models import ExcerptItem, ScoredItem
@@ -31,10 +31,17 @@ _SCORE_MAX = 10
 class Summarizer:
     """Runs LLM Pass 1: scores and summarizes excerpt batches."""
 
-    def __init__(self, client: LLMClient, config: PipelineConfig, profile: ProfileConfig) -> None:
+    def __init__(
+        self,
+        client: LLMClient,
+        config: PipelineConfig,
+        profile: ProfileConfig,
+        observability_config: ObservabilityConfig | None = None,
+    ) -> None:
         self._client = client
         self._config = config
         self._profile = profile
+        self._observability = observability_config
 
     def summarize(self, items: list[ExcerptItem]) -> list[ScoredItem]:
         """Score and summarize items; drop those below relevance threshold.
@@ -75,9 +82,17 @@ class Summarizer:
         url_to_item = {item.url: item for item in batch}
         user = _format_user_prompt(batch)
 
-        model = self._config.summarization_model
+        model = "fast"
+        project = self._observability.project if self._observability else None
+        prompt_version = self._config.prompt_versions.get("pass1")
         raw = self._client.complete(
-            system=system, user=user, model=model, response_format=_JSON_RESPONSE_FORMAT
+            system=system,
+            user=user,
+            model=model,
+            response_format=_JSON_RESPONSE_FORMAT,
+            pipeline_stage="pass1",
+            prompt_version=prompt_version,
+            project=project,
         )
         parsed = _try_parse(raw)
 
@@ -89,6 +104,9 @@ class Summarizer:
                 user=retry_user,
                 model=model,
                 response_format=_JSON_RESPONSE_FORMAT,
+                pipeline_stage="pass1",
+                prompt_version=prompt_version,
+                project=project,
             )
             parsed = _try_parse(raw)
 

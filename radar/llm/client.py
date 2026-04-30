@@ -15,7 +15,12 @@ LANGFUSE_SECRET_KEY are present in the environment; flush() is called after
 every completion (success or error) to prevent data loss in short-lived runs.
 """
 
-import langfuse  # noqa: F401  # patch target for radar.llm.client.langfuse.Langfuse in tests
+import os
+import time
+
+import langfuse  # patch target: radar.llm.client.langfuse.Langfuse
+import litellm
+import litellm.exceptions
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -29,7 +34,8 @@ def configure_litellm(*, drop_params: bool, max_retries: int) -> None:
 
     Call once at pipeline startup before any LLMClient.complete() call.
     """
-    raise NotImplementedError
+    litellm.drop_params = drop_params
+    litellm.num_retries = max_retries
 
 
 def configure_model_aliases(aliases: dict[str, str]) -> None:
@@ -37,7 +43,7 @@ def configure_model_aliases(aliases: dict[str, str]) -> None:
 
     Example: {"fast": "github_models/gpt-4o-mini", "fast_fallback": "anthropic/claude-haiku-4-5"}
     """
-    raise NotImplementedError
+    _MODEL_ALIASES.update(aliases)
 
 
 class LLMClient:
@@ -67,4 +73,142 @@ class LLMClient:
         falls back to <alias>_fallback on ServiceUnavailableError, and flushes
         Langfuse if LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY are set.
         """
-        raise NotImplementedError
+        lf_client = _make_langfuse_client()
+        try:
+            return self._complete_with_fallback(
+                system=system,
+                user=user,
+                model=model,
+                response_format=response_format,
+                pipeline_stage=pipeline_stage,
+                prompt_version=prompt_version,
+                project=project,
+                metadata=metadata,
+                lf_client=lf_client,
+            )
+        finally:
+            if lf_client is not None:
+                lf_client.flush()
+
+    def _complete_with_fallback(  # noqa: PLR0913
+        self,
+        system: str,
+        user: str,
+        model: str,
+        response_format: dict[str, str] | None,
+        pipeline_stage: str | None,
+        prompt_version: str | None,
+        project: str | None,
+        metadata: dict[str, object] | None,
+        lf_client: "langfuse.Langfuse | None",
+    ) -> str:
+        resolved = _MODEL_ALIASES.get(model, model)
+        fallback_alias = f"{model}_fallback"
+        has_fallback = fallback_alias in _MODEL_ALIASES
+
+        try:
+            return _call_litellm(
+                resolved,
+                system=system,
+                user=user,
+                response_format=response_format,
+                pipeline_stage=pipeline_stage,
+                prompt_version=prompt_version,
+                project=project,
+                metadata=metadata,
+                lf_client=lf_client,
+            )
+        except litellm.exceptions.ServiceUnavailableError:
+            if not has_fallback:
+                raise
+            fallback_model = _MODEL_ALIASES[fallback_alias]
+            logger.warning(
+                "llm_primary_unavailable_falling_back",
+                primary=resolved,
+                fallback=fallback_model,
+            )
+            try:
+                return _call_litellm(
+                    fallback_model,
+                    system=system,
+                    user=user,
+                    response_format=response_format,
+                    pipeline_stage=pipeline_stage,
+                    prompt_version=prompt_version,
+                    project=project,
+                    metadata=metadata,
+                    lf_client=lf_client,
+                )
+            except litellm.exceptions.ServiceUnavailableError as exc:
+                msg = f"Both primary ({resolved}) and fallback ({fallback_model}) failed"
+                raise RuntimeError(msg) from exc
+
+
+def _call_litellm(  # noqa: PLR0913
+    model: str,
+    *,
+    system: str,
+    user: str,
+    response_format: dict[str, str] | None,
+    pipeline_stage: str | None,
+    prompt_version: str | None,
+    project: str | None,
+    metadata: dict[str, object] | None,
+    lf_client: "langfuse.Langfuse | None",
+) -> str:
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+    kwargs: dict[str, object] = {"model": model, "messages": messages}
+    if response_format is not None:
+        kwargs["response_format"] = response_format
+
+    if lf_client is not None:
+        _record_langfuse_observation(
+            lf_client,
+            model=model,
+            pipeline_stage=pipeline_stage,
+            prompt_version=prompt_version,
+            project=project,
+            metadata=metadata,
+        )
+
+    t_start = time.monotonic()
+    response = litellm.completion(**kwargs)
+    elapsed_ms = int((time.monotonic() - t_start) * 1000)
+    content: str = response.choices[0].message.content
+
+    logger.info(
+        "llm_completion",
+        model=model,
+        prompt_tokens=response.usage.prompt_tokens,
+        completion_tokens=response.usage.completion_tokens,
+        tokens_used=response.usage.prompt_tokens + response.usage.completion_tokens,
+        elapsed_ms=elapsed_ms,
+    )
+    return content
+
+
+def _make_langfuse_client() -> "langfuse.Langfuse | None":
+    if os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY"):
+        return langfuse.Langfuse()
+    return None
+
+
+def _record_langfuse_observation(  # noqa: PLR0913
+    lf_client: "langfuse.Langfuse",
+    *,
+    model: str,
+    pipeline_stage: str | None,
+    prompt_version: str | None,
+    project: str | None,
+    metadata: dict[str, object] | None,
+) -> None:
+    lf_client.start_observation(
+        as_type="generation",
+        name=pipeline_stage or "llm_completion",
+        version=prompt_version,
+        metadata={"model": model, "project": project, **(metadata or {})},
+        model=model,
+    )

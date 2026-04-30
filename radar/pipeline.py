@@ -152,8 +152,8 @@ class Pipeline:
         # Stage 9: Pass 2 (Synthesizer) — raises on LLM error
         try:
             source_stats = {
-                "summarization_model": self._config.summarization_model,
-                "synthesis_model": self._config.synthesis_model,
+                "summarization_model": "fast",
+                "synthesis_model": "quality",
                 "sources_fetched": len(self._sources),
                 "articles_scored": len(scored_items),
                 "articles_in_digest": len(truncated_items),
